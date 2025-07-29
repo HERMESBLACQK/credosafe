@@ -76,15 +76,7 @@ const Settings = () => {
               <Shield className="w-8 h-8 text-primary-600" />
               <span className="text-xl font-bold text-neutral-900">CredoSafe</span>
             </motion.div>
-            <motion.button 
-              onClick={() => navigate('/dashboard')}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-2 text-neutral-600 hover:text-primary-600 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back to Dashboard</span>
-            </motion.button>
+          
           </div>
         </div>
       </header>
@@ -123,6 +115,11 @@ const Settings = () => {
                     <div
                       key={item.label}
                       className="p-6 hover:bg-neutral-50 transition-colors cursor-pointer"
+                      onClick={() => {
+                        if (item.label === 'Profile Information') {
+                          navigate('/profile');
+                        }
+                      }}
                     >
                       <div className="flex items-center justify-between">
                         <div>

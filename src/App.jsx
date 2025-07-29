@@ -18,6 +18,7 @@ import Settings from './pages/Settings';
 import Redeem from './pages/Redeem';
 import Profile from './pages/Profile';
 import CreateVoucher from './pages/CreateVoucher';
+import Transactions from './pages/Transactions';
 import Toast from './components/Toast';
 
 function App() {
@@ -42,6 +43,7 @@ function App() {
           <Route path="/redeem" element={<Redeem />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/create-voucher" element={<CreateVoucher />} />
+          <Route path="/transactions" element={<Transactions />} />
         </Routes>
         <Toast />
       </Router>

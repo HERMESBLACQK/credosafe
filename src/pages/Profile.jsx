@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -11,13 +11,16 @@ import {
   MapPin,
   Phone,
   Edit,
-  Camera
+  Camera,
+  Save,
+  X
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
 
 const Profile = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
+  const [isEditing, setIsEditing] = useState(false);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -26,7 +29,7 @@ const Profile = () => {
   };
 
   // Mock user profile data
-  const profileData = {
+  const [profileData, setProfileData] = useState({
     firstName: user?.firstName || 'John',
     lastName: user?.lastName || 'Doe',
     email: user?.email || 'john.doe@example.com',
@@ -34,6 +37,19 @@ const Profile = () => {
     location: 'New York, NY',
     joinDate: 'January 2024',
     avatar: null
+  });
+
+  const handleProfileChange = (field, value) => {
+    setProfileData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveProfile = () => {
+    // Simulate saving profile data
+    console.log('Saving profile:', profileData);
+    setIsEditing(false);
   };
 
   return (
@@ -50,15 +66,7 @@ const Profile = () => {
               <Shield className="w-8 h-8 text-primary-600" />
               <span className="text-xl font-bold text-neutral-900">CredoSafe</span>
             </motion.div>
-            <motion.button 
-              onClick={() => navigate('/dashboard')}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-2 text-neutral-600 hover:text-primary-600 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back to Dashboard</span>
-            </motion.button>
+      
           </div>
         </div>
       </header>
@@ -90,10 +98,34 @@ const Profile = () => {
                 {profileData.firstName} {profileData.lastName}
               </h2>
               <p className="text-neutral-600 mb-4">CredoSafe Member</p>
-              <button className="flex items-center space-x-2 text-primary-600 hover:text-primary-700 font-medium">
-                <Edit className="w-4 h-4" />
-                <span>Edit Profile</span>
-              </button>
+              <div className="flex space-x-3">
+                {isEditing ? (
+                  <>
+                    <button 
+                      onClick={handleSaveProfile}
+                      className="flex items-center space-x-2 text-white bg-primary-600 hover:bg-primary-700 px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>Save</span>
+                    </button>
+                    <button 
+                      onClick={() => setIsEditing(false)}
+                      className="flex items-center space-x-2 text-neutral-600 hover:text-neutral-800 px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                      <span>Cancel</span>
+                    </button>
+                  </>
+                ) : (
+                  <button 
+                    onClick={() => setIsEditing(true)}
+                    className="flex items-center space-x-2 text-primary-600 hover:text-primary-700 font-medium"
+                  >
+                    <Edit className="w-4 h-4" />
+                    <span>Edit Profile</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -110,11 +142,27 @@ const Profile = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-neutral-600">Full Name</p>
-                    <p className="font-medium text-neutral-900">{profileData.firstName} {profileData.lastName}</p>
+                    {isEditing ? (
+                      <div className="flex space-x-2 mt-1">
+                        <input
+                          type="text"
+                          value={profileData.firstName}
+                          onChange={(e) => handleProfileChange('firstName', e.target.value)}
+                          className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          placeholder="First Name"
+                        />
+                        <input
+                          type="text"
+                          value={profileData.lastName}
+                          onChange={(e) => handleProfileChange('lastName', e.target.value)}
+                          className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          placeholder="Last Name"
+                        />
+                      </div>
+                    ) : (
+                      <p className="font-medium text-neutral-900">{profileData.firstName} {profileData.lastName}</p>
+                    )}
                   </div>
-                  <button className="text-primary-600 hover:text-primary-700">
-                    <Edit className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
 
@@ -125,11 +173,18 @@ const Profile = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-neutral-600">Email Address</p>
-                    <p className="font-medium text-neutral-900">{profileData.email}</p>
+                    {isEditing ? (
+                      <input
+                        type="email"
+                        value={profileData.email}
+                        onChange={(e) => handleProfileChange('email', e.target.value)}
+                        className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        placeholder="Email Address"
+                      />
+                    ) : (
+                      <p className="font-medium text-neutral-900">{profileData.email}</p>
+                    )}
                   </div>
-                  <button className="text-primary-600 hover:text-primary-700">
-                    <Edit className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
 
@@ -140,11 +195,18 @@ const Profile = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-neutral-600">Phone Number</p>
-                    <p className="font-medium text-neutral-900">{profileData.phone}</p>
+                    {isEditing ? (
+                      <input
+                        type="tel"
+                        value={profileData.phone}
+                        onChange={(e) => handleProfileChange('phone', e.target.value)}
+                        className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        placeholder="Phone Number"
+                      />
+                    ) : (
+                      <p className="font-medium text-neutral-900">{profileData.phone}</p>
+                    )}
                   </div>
-                  <button className="text-primary-600 hover:text-primary-700">
-                    <Edit className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
 
@@ -155,11 +217,18 @@ const Profile = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-neutral-600">Location</p>
-                    <p className="font-medium text-neutral-900">{profileData.location}</p>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={profileData.location}
+                        onChange={(e) => handleProfileChange('location', e.target.value)}
+                        className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        placeholder="Location"
+                      />
+                    ) : (
+                      <p className="font-medium text-neutral-900">{profileData.location}</p>
+                    )}
                   </div>
-                  <button className="text-primary-600 hover:text-primary-700">
-                    <Edit className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
 
@@ -174,42 +243,6 @@ const Profile = () => {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Account Actions */}
-          <div className="mt-6 bg-white rounded-2xl shadow-soft overflow-hidden">
-            <div className="p-6 border-b border-neutral-200">
-              <h3 className="text-xl font-bold text-neutral-900">Account Actions</h3>
-            </div>
-            <div className="divide-y divide-neutral-200">
-              <button className="w-full p-6 text-left hover:bg-neutral-50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-neutral-900">Change Password</p>
-                    <p className="text-sm text-neutral-600">Update your account password</p>
-                  </div>
-                  <ArrowLeft className="w-5 h-5 text-neutral-400 transform rotate-180" />
-                </div>
-              </button>
-              <button className="w-full p-6 text-left hover:bg-neutral-50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-neutral-900">Privacy Settings</p>
-                    <p className="text-sm text-neutral-600">Manage your privacy preferences</p>
-                  </div>
-                  <ArrowLeft className="w-5 h-5 text-neutral-400 transform rotate-180" />
-                </div>
-              </button>
-              <button className="w-full p-6 text-left hover:bg-neutral-50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-neutral-900">Account Security</p>
-                    <p className="text-sm text-neutral-600">Two-factor authentication and security</p>
-                  </div>
-                  <ArrowLeft className="w-5 h-5 text-neutral-400 transform rotate-180" />
-                </div>
-              </button>
             </div>
           </div>
         </motion.div>

@@ -100,15 +100,7 @@ const SignIn = () => {
               <Shield className="w-8 h-8 text-primary-600" />
               <span className="text-xl font-bold text-neutral-900">CredoSafe</span>
             </motion.div>
-            <motion.link 
-              href="/"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-2 text-neutral-600 hover:text-primary-600 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back to Home</span>
-            </motion.link>
+         
           </div>
         </div>
       </nav>

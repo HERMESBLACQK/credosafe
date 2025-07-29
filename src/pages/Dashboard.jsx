@@ -267,7 +267,10 @@ const Dashboard = () => {
               ))}
             </div>
             <div className="p-4 border-t border-neutral-200">
-              <button className="w-full text-primary-600 hover:text-primary-700 font-medium flex items-center justify-center space-x-2">
+              <button 
+                onClick={() => navigate('/transactions')}
+                className="w-full text-primary-600 hover:text-primary-700 font-medium flex items-center justify-center space-x-2"
+              >
                 <span>View All Transactions</span>
                 <ArrowRight className="w-4 h-4" />
               </button>

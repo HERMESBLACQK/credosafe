@@ -6,7 +6,7 @@ import {
   CreditCard,
   Settings,
   Wallet as WalletIcon,
-  User
+  Home
 } from 'lucide-react';
 
 const FloatingFooter = () => {
@@ -22,18 +22,19 @@ const FloatingFooter = () => {
   };
 
   const navItems = [
+       {
+      label: 'Home',
+      icon: <Home className="w-6 h-6" />,
+      route: '/dashboard',
+      active: isActive('/dashboard')
+    },
     {
       label: 'Create',
       icon: <Plus className="w-6 h-6" />,
       route: '/create-voucher',
       active: isActive('/create-voucher') || isActive('/work-order-vouchers') || isActive('/purchase-escrow-vouchers') || isActive('/prepaid-vouchers') || isActive('/gift-card-vouchers')
     },
-    {
-      label: 'Wallet',
-      icon: <WalletIcon className="w-6 h-6" />,
-      route: '/wallet',
-      active: isActive('/wallet')
-    },
+
     {
       label: 'Redeem',
       icon: <CreditCard className="w-8 h-8" />,
@@ -42,17 +43,18 @@ const FloatingFooter = () => {
       isCenter: true
     },
     {
+      label: 'Wallet',
+      icon: <WalletIcon className="w-6 h-6" />,
+      route: '/wallet',
+      active: isActive('/wallet')
+    },
+    {
       label: 'Settings',
       icon: <Settings className="w-6 h-6" />,
       route: '/settings',
       active: isActive('/settings')
     },
-    {
-      label: 'Profile',
-      icon: <User className="w-6 h-6" />,
-      route: '/dashboard',
-      active: isActive('/dashboard')
-    }
+ 
   ];
 
   return (
