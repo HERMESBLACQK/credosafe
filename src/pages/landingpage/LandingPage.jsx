@@ -1,5 +1,7 @@
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { 
   Shield, 
   CreditCard, 
@@ -10,10 +12,18 @@ import {
   Users,
   Lock,
   Zap,
-  Globe
+  Globe,
+  LogIn,
+  UserPlus,
+  LogOut
 } from 'lucide-react';
+import { logoutUser } from '../../store/slices/authSlice';
+import { showToast } from '../../store/slices/uiSlice';
 
 const LandingPage = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
     animate: { opacity: 1, y: 0 },
@@ -99,15 +109,45 @@ const LandingPage = () => {
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="hidden md:flex items-center space-x-8"
+              className="hidden md:flex items-center space-x-4"
             >
               <a href="#features" className="text-gray-600 hover:text-blue-600 transition-colors">Features</a>
               <a href="#vouchers" className="text-gray-600 hover:text-blue-600 transition-colors">Vouchers</a>
               <a href="/about" className="text-gray-600 hover:text-blue-600 transition-colors">About</a>
               <a href="/contact" className="text-gray-600 hover:text-blue-600 transition-colors">Contact</a>
-              <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                Get Started
-              </button>
+              
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-3">
+                  <span className="text-gray-600">Welcome, {user?.name}</span>
+                  <button 
+                    onClick={() => {
+                      dispatch(logoutUser());
+                      dispatch(showToast({ message: 'Logged out successfully', type: 'success' }));
+                    }}
+                    className="flex items-center space-x-2 text-gray-600 hover:text-red-600 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <button 
+                    onClick={() => navigate('/signin')}
+                    className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>Sign In</span>
+                  </button>
+                  <button 
+                    onClick={() => navigate('/signup')}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>Sign Up</span>
+                  </button>
+                </div>
+              )}
             </motion.div>
           </div>
         </div>
@@ -145,8 +185,22 @@ const LandingPage = () => {
               transition={{ delay: 0.4 }}
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
-              <button className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition-all transform hover:scale-105 flex items-center justify-center space-x-2">
-                <span>Create Voucher</span>
+              <button 
+                onClick={() => {
+                  if (isAuthenticated) {
+                    // Navigate to dashboard for authenticated users
+                    navigate('/dashboard');
+                  } else {
+                    dispatch(showToast({ 
+                      message: 'Please sign in to access your dashboard', 
+                      type: 'info' 
+                    }));
+                    navigate('/signin');
+                  }
+                }}
+                className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition-all transform hover:scale-105 flex items-center justify-center space-x-2"
+              >
+                <span>{isAuthenticated ? 'Create Voucher' : 'Get Started'}</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg hover:border-blue-600 hover:text-blue-600 transition-all">
@@ -297,9 +351,20 @@ const LandingPage = () => {
             whileInView="animate"
             viewport={{ once: true }}
             transition={{ delay: 0.4 }}
+            onClick={() => {
+              if (isAuthenticated) {
+                navigate('/dashboard');
+              } else {
+                dispatch(showToast({ 
+                  message: 'Please sign in to access your dashboard', 
+                  type: 'info' 
+                }));
+                navigate('/signin');
+              }
+            }}
             className="bg-white text-blue-600 px-8 py-4 rounded-lg hover:bg-gray-100 transition-colors font-semibold flex items-center space-x-2 mx-auto"
           >
-            <span>Create Your First Voucher</span>
+            <span>{isAuthenticated ? 'Create Your First Voucher' : 'Get Started Today'}</span>
             <ArrowRight className="w-5 h-5" />
           </motion.button>
         </div>
