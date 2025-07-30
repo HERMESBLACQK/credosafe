@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { loginUser } from '../store/slices/authSlice';
 import { showToast } from '../store/slices/uiSlice';
+import { apiService, apiUtils } from '../api';
 
 const SignIn = () => {
   const dispatch = useDispatch();
@@ -72,15 +73,43 @@ const SignIn = () => {
     }
 
     try {
-      await dispatch(loginUser(formData)).unwrap();
-      dispatch(showToast({ 
-        message: 'Welcome back to CredoSafe!', 
-        type: 'success' 
-      }));
-      navigate('/dashboard');
+      // Call login API
+      const response = await apiService.auth.login(formData);
+      
+      if (response.success) {
+        console.log('📝 Login response:', response);
+        console.log('🎫 Token from login:', response.data?.data?.token);
+        
+        // Store the token (handle double-nested data structure)
+        const token = response.data?.data?.token || response.data?.token;
+        if (token) {
+          apiUtils.setAuthToken(token);
+          console.log('✅ Login token stored successfully');
+        } else {
+          console.log('❌ No token received from login');
+        }
+        
+        // Dispatch login action with user data including wallet
+        dispatch(loginUser({ 
+          user: response.data.data?.user || response.data.user,
+          token: token
+        }));
+        
+        dispatch(showToast({ 
+          message: 'Welcome back to CredoSafe!', 
+          type: 'success' 
+        }));
+        navigate('/dashboard');
+      } else {
+        dispatch(showToast({ 
+          message: response.error || response.message || 'Login failed. Please try again.', 
+          type: 'error' 
+        }));
+      }
     } catch (error) {
+      console.error('Login error:', error);
       dispatch(showToast({ 
-        message: 'Invalid email or password. Please try again.', 
+        message: 'Login failed. Please check your connection and try again.', 
         type: 'error' 
       }));
     }

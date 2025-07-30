@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -9,7 +10,9 @@ import {
   QrCode,
   Camera,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Upload,
+  FileText
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
 
@@ -17,7 +20,8 @@ const Redeem = () => {
   const navigate = useNavigate();
   const [redeemMethod, setRedeemMethod] = useState('code');
   const [voucherCode, setVoucherCode] = useState('');
-  const [isRedeeming, setIsRedeeming] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -25,17 +29,54 @@ const Redeem = () => {
     transition: { duration: 0.6 }
   };
 
-  const handleRedeem = async (e) => {
+  const handleCodeSubmit = async (e) => {
     e.preventDefault();
     if (!voucherCode.trim()) return;
 
-    setIsRedeeming(true);
-    // Simulate redemption process
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsRedeeming(false);
+    setIsProcessing(true);
+    // Simulate processing
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setIsProcessing(false);
     
-    // Show success message and reset
-    setVoucherCode('');
+    // Navigate to preview page with voucher data
+    navigate('/voucher-preview', { 
+      state: { 
+        voucherCode: voucherCode,
+        method: 'code'
+      } 
+    });
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setUploadedFile(file);
+      // Simulate processing the uploaded file
+      setIsProcessing(true);
+      setTimeout(() => {
+        setIsProcessing(false);
+        navigate('/voucher-preview', { 
+          state: { 
+            uploadedFile: file,
+            method: 'upload'
+          } 
+        });
+      }, 2000);
+    }
+  };
+
+  const handleQRScan = () => {
+    // Simulate QR scanning
+    setIsProcessing(true);
+    setTimeout(() => {
+      setIsProcessing(false);
+      navigate('/voucher-preview', { 
+        state: { 
+          method: 'qr',
+          voucherCode: 'QR-SCANNED-CODE-123'
+        } 
+      });
+    }, 1500);
   };
 
   return (
@@ -69,42 +110,55 @@ const Redeem = () => {
               <CreditCard className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-neutral-900 mb-2">Redeem Voucher</h1>
-            <p className="text-neutral-600">Enter your voucher code or scan QR code to redeem</p>
+            <p className="text-neutral-600">Enter code, scan QR, or upload voucher to redeem</p>
           </div>
 
           {/* Redeem Method Tabs */}
           <div className="bg-white rounded-2xl shadow-soft p-6 mb-6">
-            <div className="flex space-x-1 mb-6">
+            <div className="grid grid-cols-3 gap-2 mb-6">
               <button
                 onClick={() => setRedeemMethod('code')}
-                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
+                className={`py-3 px-4 rounded-lg font-medium transition-colors ${
                   redeemMethod === 'code'
                     ? 'bg-primary-600 text-white'
                     : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
                 }`}
               >
-                <div className="flex items-center justify-center space-x-2">
+                <div className="flex flex-col items-center space-y-1">
                   <Search className="w-5 h-5" />
-                  <span>Enter Code</span>
+                  <span className="text-xs">Code</span>
                 </div>
               </button>
               <button
                 onClick={() => setRedeemMethod('qr')}
-                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
+                className={`py-3 px-4 rounded-lg font-medium transition-colors ${
                   redeemMethod === 'qr'
                     ? 'bg-primary-600 text-white'
                     : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
                 }`}
               >
-                <div className="flex items-center justify-center space-x-2">
+                <div className="flex flex-col items-center space-y-1">
                   <QrCode className="w-5 h-5" />
-                  <span>Scan QR</span>
+                  <span className="text-xs">Scan QR</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setRedeemMethod('upload')}
+                className={`py-3 px-4 rounded-lg font-medium transition-colors ${
+                  redeemMethod === 'upload'
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                }`}
+              >
+                <div className="flex flex-col items-center space-y-1">
+                  <Upload className="w-5 h-5" />
+                  <span className="text-xs">Upload</span>
                 </div>
               </button>
             </div>
 
-            {redeemMethod === 'code' ? (
-              <form onSubmit={handleRedeem} className="space-y-6">
+            {redeemMethod === 'code' && (
+              <form onSubmit={handleCodeSubmit} className="space-y-6">
                 <div>
                   <label htmlFor="voucherCode" className="block text-sm font-medium text-neutral-700 mb-2">
                     Voucher Code
@@ -121,34 +175,99 @@ const Redeem = () => {
                 </div>
                 <button
                   type="submit"
-                  disabled={isRedeeming || !voucherCode.trim()}
+                  disabled={isProcessing || !voucherCode.trim()}
                   className="w-full bg-primary-600 text-white py-3 px-4 rounded-lg hover:bg-primary-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
-                  {isRedeeming ? (
+                  {isProcessing ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Redeeming...</span>
+                      <span>Processing...</span>
                     </>
                   ) : (
                     <>
                       <CheckCircle className="w-5 h-5" />
-                      <span>Redeem Voucher</span>
+                      <span>Verify Voucher</span>
                     </>
                   )}
                 </button>
               </form>
-            ) : (
+            )}
+
+            {redeemMethod === 'qr' && (
               <div className="text-center py-8">
                 <div className="w-32 h-32 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <Camera className="w-16 h-16 text-neutral-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-neutral-900 mb-2">QR Code Scanner</h3>
                 <p className="text-neutral-600 mb-6">
-                  Point your camera at the voucher QR code to redeem automatically
+                  Point your camera at the voucher QR code to scan and verify
                 </p>
-                <button className="bg-primary-600 text-white py-3 px-6 rounded-lg hover:bg-primary-700 transition-colors font-semibold">
-                  Open Camera
+                <button 
+                  onClick={handleQRScan}
+                  disabled={isProcessing}
+                  className="bg-primary-600 text-white py-3 px-6 rounded-lg hover:bg-primary-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 mx-auto"
+                >
+                  {isProcessing ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Scanning...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-5 h-5" />
+                      <span>Open Camera</span>
+                    </>
+                  )}
                 </button>
+              </div>
+            )}
+
+            {redeemMethod === 'upload' && (
+              <div className="text-center py-8">
+                <div className="w-32 h-32 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Upload className="w-16 h-16 text-neutral-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-neutral-900 mb-2">Upload Voucher</h3>
+                <p className="text-neutral-600 mb-6">
+                  Upload a voucher image or document to verify and redeem
+                </p>
+                <div className="border-2 border-dashed border-neutral-300 rounded-lg p-6">
+                  <input
+                    type="file"
+                    onChange={handleFileUpload}
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    className="hidden"
+                    id="voucher-upload"
+                    disabled={isProcessing}
+                  />
+                  <label
+                    htmlFor="voucher-upload"
+                    className="cursor-pointer block"
+                  >
+                    <div className="text-center">
+                      <FileText className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
+                      <p className="text-sm text-neutral-600 mb-2">
+                        Click to upload or drag and drop
+                      </p>
+                      <p className="text-xs text-neutral-500">
+                        JPG, PNG, PDF up to 10MB
+                      </p>
+                    </div>
+                  </label>
+                </div>
+                {uploadedFile && (
+                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm text-green-700">
+                      ✓ {uploadedFile.name} uploaded successfully
+                    </p>
+                  </div>
+                )}
+                {isProcessing && (
+                  <div className="mt-4 flex items-center justify-center space-x-2 text-primary-600">
+                    <div className="w-5 h-5 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Processing voucher...</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -162,8 +281,10 @@ const Redeem = () => {
                 <ul className="text-blue-800 space-y-1 text-sm">
                   <li>• Enter the voucher code provided by the sender</li>
                   <li>• Or scan the QR code if available</li>
-                  <li>• Funds will be added to your wallet instantly</li>
-                  <li>• You can use the funds for any CredoSafe transactions</li>
+                  <li>• Or upload a voucher image/document</li>
+                  <li>• Verify voucher details on the preview page</li>
+                  <li>• Choose withdrawal method (wallet or bank)</li>
+                  <li>• Complete the redemption process</li>
                 </ul>
               </div>
             </div>

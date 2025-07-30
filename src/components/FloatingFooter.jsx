@@ -1,4 +1,5 @@
 import React from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -22,52 +23,50 @@ const FloatingFooter = () => {
   };
 
   const navItems = [
-       {
+    {
       label: 'Home',
-      icon: <Home className="w-6 h-6" />,
+      icon: <Home className="w-5 h-5" />,
       route: '/dashboard',
       active: isActive('/dashboard')
     },
     {
       label: 'Create',
-      icon: <Plus className="w-6 h-6" />,
+      icon: <Plus className="w-5 h-5" />,
       route: '/create-voucher',
       active: isActive('/create-voucher') || isActive('/work-order-vouchers') || isActive('/purchase-escrow-vouchers') || isActive('/prepaid-vouchers') || isActive('/gift-card-vouchers')
     },
-
     {
       label: 'Redeem',
-      icon: <CreditCard className="w-8 h-8" />,
+      icon: <CreditCard className="w-6 h-6" />,
       route: '/redeem',
       active: isActive('/redeem'),
       isCenter: true
     },
     {
       label: 'Wallet',
-      icon: <WalletIcon className="w-6 h-6" />,
+      icon: <WalletIcon className="w-5 h-5" />,
       route: '/wallet',
       active: isActive('/wallet')
     },
     {
       label: 'Settings',
-      icon: <Settings className="w-6 h-6" />,
+      icon: <Settings className="w-5 h-5" />,
       route: '/settings',
       active: isActive('/settings')
     },
- 
   ];
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50">
-      <div className="max-w-md mx-auto px-4 pb-4">
+      <div className="max-w-sm mx-auto px-3 pb-3">
         <motion.div
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="bg-white rounded-2xl shadow-large p-4"
+          className="bg-white rounded-xl shadow-medium p-2"
         >
           <div className="flex items-center justify-around">
-            {navItems.map((item, index) => (
+            {navItems.map((item) => (
               <button
                 key={item.label}
                 onClick={() => handleNavigation(item.route)}
@@ -79,8 +78,8 @@ const FloatingFooter = () => {
               >
                 <div className={`${
                   item.isCenter 
-                    ? 'w-16 h-16 -mt-6' 
-                    : 'w-12 h-12'
+                    ? 'w-12 h-12 -mt-4' 
+                    : 'w-8 h-8'
                 } ${
                   item.active
                     ? item.isCenter
@@ -90,7 +89,7 @@ const FloatingFooter = () => {
                       ? 'bg-gradient-to-r from-primary-600 to-accent-600'
                       : 'bg-neutral-100'
                 } ${
-                  item.isCenter ? 'rounded-full' : 'rounded-xl'
+                  item.isCenter ? 'rounded-full' : 'rounded-lg'
                 } flex items-center justify-center ${
                   item.active && !item.isCenter ? 'text-primary-600' : ''
                 } ${

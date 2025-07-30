@@ -4,10 +4,7 @@ import { store } from './store';
 import LandingPage from './pages/landingpage/LandingPage';
 import PrivacyPolicy from './pages/landingpage/PrivacyPolicy';
 import TermsOfService from './pages/landingpage/TermsOfService';
-import WorkOrderVouchers from './pages/landingpage/WorkOrderVouchers';
-import PurchaseEscrowVouchers from './pages/landingpage/PurchaseEscrowVouchers';
-import PrepaidVouchers from './pages/landingpage/PrepaidVouchers';
-import GiftCardVouchers from './pages/landingpage/GiftCardVouchers';
+
 import About from './pages/landingpage/About';
 import Contact from './pages/landingpage/Contact';
 import SignUp from './pages/SignUp';
@@ -19,6 +16,16 @@ import Redeem from './pages/Redeem';
 import Profile from './pages/Profile';
 import CreateVoucher from './pages/CreateVoucher';
 import Transactions from './pages/Transactions';
+import ChangePassword from './pages/ChangePassword';
+import LoginHistory from './pages/LoginHistory';
+import DeviceManagement from './pages/DeviceManagement';
+import WorkOrderVouchers from './pages/WorkOrderVouchers';
+import PurchaseEscrowVouchers from './pages/PurchaseEscrowVouchers';
+import PrepaidVouchers from './pages/PrepaidVouchers';
+import GiftCardVouchers from './pages/GiftCardVouchers';
+import WalletTransactions from './pages/WalletTransactions';
+import Tier from './pages/Tier';
+import VoucherPreview from './pages/VoucherPreview';
 import Toast from './components/Toast';
 
 function App() {
@@ -44,6 +51,12 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/create-voucher" element={<CreateVoucher />} />
           <Route path="/transactions" element={<Transactions />} />
+                                <Route path="/change-password" element={<ChangePassword />} />
+                      <Route path="/login-history" element={<LoginHistory />} />
+                      <Route path="/device-management" element={<DeviceManagement />} />
+                      <Route path="/wallet-transactions" element={<WalletTransactions />} />
+                      <Route path="/tier" element={<Tier />} />
+                      <Route path="/voucher-preview" element={<VoucherPreview />} />
         </Routes>
         <Toast />
       </Router>

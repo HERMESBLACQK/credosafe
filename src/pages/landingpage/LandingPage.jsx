@@ -145,7 +145,7 @@ const LandingPage = () => {
                   >
                     <UserPlus className="w-4 h-4" />
                     <span>Sign Up</span>
-                  </button>
+              </button>
                 </div>
               )}
             </motion.div>

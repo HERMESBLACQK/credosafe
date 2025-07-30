@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { 
   Shield, 
   User, 
@@ -15,12 +15,17 @@ import {
   Save,
   X
 } from 'lucide-react';
+import { apiService } from '../api';
+import { updateUser } from '../store/slices/authSlice';
+import { showToast } from '../store/slices/uiSlice';
 import FloatingFooter from '../components/FloatingFooter';
 
 const Profile = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -28,16 +33,40 @@ const Profile = () => {
     transition: { duration: 0.6 }
   };
 
-  // Mock user profile data
+  // User profile data from Redux store
   const [profileData, setProfileData] = useState({
-    firstName: user?.firstName || 'John',
-    lastName: user?.lastName || 'Doe',
-    email: user?.email || 'john.doe@example.com',
-    phone: '+1 (555) 123-4567',
-    location: 'New York, NY',
-    joinDate: 'January 2024',
-    avatar: null
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    location: user?.location || '',
+    joinDate: user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long'
+    }) : '',
+    avatarUrl: user?.avatarUrl || ''
   });
+
+  // File input ref for image upload
+  const fileInputRef = React.useRef(null);
+
+  // Update profile data when user changes
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        location: user.location || '',
+        joinDate: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long'
+        }) : '',
+        avatarUrl: user.avatarUrl || ''
+      });
+    }
+  }, [user]);
 
   const handleProfileChange = (field, value) => {
     setProfileData(prev => ({
@@ -46,10 +75,95 @@ const Profile = () => {
     }));
   };
 
-  const handleSaveProfile = () => {
-    // Simulate saving profile data
-    console.log('Saving profile:', profileData);
-    setIsEditing(false);
+    const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        dispatch(showToast({
+          message: 'Please select an image file',
+          type: 'error'
+        }));
+        return;
+      }
+
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        dispatch(showToast({
+          message: 'Image size should be less than 5MB',
+          type: 'error'
+        }));
+        return;
+      }
+
+      // Convert to base64 for demo (in production, upload to cloud storage)
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64String = e.target.result;
+        setProfileData(prev => ({
+          ...prev,
+          avatarUrl: base64String
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      setLoading(true);
+      
+      // Only send updatable fields
+      const updateData = {
+        phone: profileData.phone,
+        location: profileData.location,
+        avatarUrl: profileData.avatarUrl
+      };
+
+      console.log('📤 Sending profile update:', updateData);
+      
+      const response = await apiService.auth.updateProfile(updateData);
+      console.log('📥 Profile update response:', response);
+      
+      if (response.success) {
+        // Update user in Redux store with the returned user data
+        dispatch(updateUser(response.data.data.user));
+        
+        // Update local profile data with the new user data
+        setProfileData({
+          firstName: response.data.data.user.firstName || '',
+          lastName: response.data.data.user.lastName || '',
+          email: response.data.data.user.email || '',
+          phone: response.data.data.user.phone || '',
+          location: response.data.data.user.location || '',
+          joinDate: response.data.data.user.createdAt ? new Date(response.data.data.user.createdAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long'
+          }) : '',
+          avatarUrl: response.data.data.user.avatarUrl || ''
+        });
+        
+        dispatch(showToast({
+          message: 'Profile updated successfully',
+          type: 'success'
+        }));
+        
+        setIsEditing(false);
+      } else {
+        dispatch(showToast({
+          message: response.error || 'Failed to update profile',
+          type: 'error'
+        }));
+      }
+    } catch (error) {
+      console.error('❌ Profile update error:', error);
+      dispatch(showToast({
+        message: 'Failed to update profile',
+        type: 'error'
+      }));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -86,14 +200,34 @@ const Profile = () => {
           {/* Profile Header */}
           <div className="bg-white rounded-2xl shadow-soft p-8 mb-6">
             <div className="flex flex-col items-center">
-              <div className="relative mb-6">
-                <div className="w-24 h-24 bg-gradient-to-r from-primary-500 to-accent-600 rounded-full flex items-center justify-center">
-                  <User className="w-12 h-12 text-white" />
-                </div>
-                <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center hover:bg-primary-700 transition-colors">
-                  <Camera className="w-4 h-4 text-white" />
-                </button>
-              </div>
+                             <div className="relative mb-6">
+                 {profileData.avatarUrl ? (
+                   <img 
+                     src={profileData.avatarUrl} 
+                     alt="Profile" 
+                     className="w-24 h-24 rounded-full object-cover"
+                   />
+                 ) : (
+                   <div className="w-24 h-24 bg-gradient-to-r from-primary-500 to-accent-600 rounded-full flex items-center justify-center">
+                     <User className="w-12 h-12 text-white" />
+                   </div>
+                 )}
+                 {isEditing && (
+                   <button 
+                     onClick={() => fileInputRef.current?.click()}
+                     className="absolute bottom-0 right-0 w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center hover:bg-primary-700 transition-colors"
+                   >
+                     <Camera className="w-4 h-4 text-white" />
+                   </button>
+                 )}
+                 <input
+                   ref={fileInputRef}
+                   type="file"
+                   accept="image/*"
+                   onChange={handleImageUpload}
+                   className="hidden"
+                 />
+               </div>
               <h2 className="text-2xl font-bold text-neutral-900 mb-2">
                 {profileData.firstName} {profileData.lastName}
               </h2>
@@ -103,14 +237,16 @@ const Profile = () => {
                   <>
                     <button 
                       onClick={handleSaveProfile}
-                      className="flex items-center space-x-2 text-white bg-primary-600 hover:bg-primary-700 px-4 py-2 rounded-lg transition-colors"
+                      disabled={loading}
+                      className="flex items-center space-x-2 text-white bg-primary-600 hover:bg-primary-700 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Save className="w-4 h-4" />
-                      <span>Save</span>
+                      <span>{loading ? 'Saving...' : 'Save'}</span>
                     </button>
                     <button 
                       onClick={() => setIsEditing(false)}
-                      className="flex items-center space-x-2 text-neutral-600 hover:text-neutral-800 px-4 py-2 rounded-lg transition-colors"
+                      disabled={loading}
+                      className="flex items-center space-x-2 text-neutral-600 hover:text-neutral-800 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <X className="w-4 h-4" />
                       <span>Cancel</span>
@@ -142,26 +278,8 @@ const Profile = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-neutral-600">Full Name</p>
-                    {isEditing ? (
-                      <div className="flex space-x-2 mt-1">
-                        <input
-                          type="text"
-                          value={profileData.firstName}
-                          onChange={(e) => handleProfileChange('firstName', e.target.value)}
-                          className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                          placeholder="First Name"
-                        />
-                        <input
-                          type="text"
-                          value={profileData.lastName}
-                          onChange={(e) => handleProfileChange('lastName', e.target.value)}
-                          className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                          placeholder="Last Name"
-                        />
-                      </div>
-                    ) : (
-                      <p className="font-medium text-neutral-900">{profileData.firstName} {profileData.lastName}</p>
-                    )}
+                    <p className="font-medium text-neutral-900">{profileData.firstName} {profileData.lastName}</p>
+                    <p className="text-xs text-neutral-500 mt-1">Name cannot be changed</p>
                   </div>
                 </div>
               </div>
@@ -173,17 +291,8 @@ const Profile = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-neutral-600">Email Address</p>
-                    {isEditing ? (
-                      <input
-                        type="email"
-                        value={profileData.email}
-                        onChange={(e) => handleProfileChange('email', e.target.value)}
-                        className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        placeholder="Email Address"
-                      />
-                    ) : (
-                      <p className="font-medium text-neutral-900">{profileData.email}</p>
-                    )}
+                    <p className="font-medium text-neutral-900">{profileData.email}</p>
+                    <p className="text-xs text-neutral-500 mt-1">Email cannot be changed</p>
                   </div>
                 </div>
               </div>
@@ -201,10 +310,10 @@ const Profile = () => {
                         value={profileData.phone}
                         onChange={(e) => handleProfileChange('phone', e.target.value)}
                         className="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        placeholder="Phone Number"
+                        placeholder="Phone Number (e.g., +1 555 123 4567)"
                       />
                     ) : (
-                      <p className="font-medium text-neutral-900">{profileData.phone}</p>
+                      <p className="font-medium text-neutral-900">{profileData.phone || 'Not set'}</p>
                     )}
                   </div>
                 </div>
@@ -226,11 +335,13 @@ const Profile = () => {
                         placeholder="Location"
                       />
                     ) : (
-                      <p className="font-medium text-neutral-900">{profileData.location}</p>
+                      <p className="font-medium text-neutral-900">{profileData.location || 'Not set'}</p>
                     )}
                   </div>
                 </div>
               </div>
+
+
 
               <div className="p-6">
                 <div className="flex items-center space-x-4">

@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { loginUser } from '../store/slices/authSlice';
 import { showToast } from '../store/slices/uiSlice';
+import { apiService, apiUtils } from '../api';
+import OTPModal from '../components/OTPModal';
 
 const SignUp = () => {
   const dispatch = useDispatch();
@@ -30,6 +32,12 @@ const SignUp = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  
+  // OTP Modal state
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState(null);
+  const [pendingUserData, setPendingUserData] = useState(null);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -93,37 +101,122 @@ const SignUp = () => {
     }
 
     try {
-      // Simulate signup API call
-      await new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({
-            user: {
-              id: Date.now().toString(),
-              firstName: formData.firstName,
-              lastName: formData.lastName,
-              email: formData.email,
-              name: `${formData.firstName} ${formData.lastName}`
-            },
-            token: 'mock-jwt-token-' + Date.now()
-          });
-        }, 1000);
+      // Prepare user data for registration
+      const userData = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+        password: formData.password
+      };
+
+      // Call registration API
+      const response = await apiService.auth.register(userData);
+      
+      if (response.success) {
+        console.log('📝 Registration response:', response);
+        console.log('🎫 Token from registration:', response.data?.data?.token);
+        
+        // Store the temporary token from registration (handle double-nested data structure)
+        const token = response.data?.data?.token || response.data?.token;
+        if (token) {
+          apiUtils.setAuthToken(token);
+          console.log('✅ Temporary token stored after registration');
+        } else {
+          console.log('❌ No token received from registration');
+        }
+        
+        // Store pending user data and show OTP modal
+        setPendingUserData(userData);
+        setShowOTPModal(true);
+        setOtpError(null);
+        
+        dispatch(showToast({ 
+          message: 'Registration successful! Please verify your email with the OTP sent to your inbox.', 
+          type: 'success' 
+        }));
+      } else {
+        dispatch(showToast({ 
+          message: response.error || response.message || 'Registration failed. Please try again.', 
+          type: 'error' 
+        }));
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      dispatch(showToast({ 
+        message: 'Registration failed. Please check your connection and try again.', 
+        type: 'error' 
+      }));
+    }
+  };
+
+  // Handle OTP verification
+  const handleOTPVerify = async (otp) => {
+    setOtpLoading(true);
+    setOtpError(null);
+
+    try {
+      const response = await apiService.auth.verifyOTP({
+        email: formData.email,
+        otp: otp
       });
 
-      // Auto-login after successful signup
-      dispatch(loginUser({ 
-        email: formData.email, 
-        password: formData.password 
-      }));
-      
-      dispatch(showToast({ 
-        message: 'Account created successfully! Welcome to CredoSafe.', 
-        type: 'success' 
-      }));
-      
-      navigate('/dashboard');
+      if (response.success) {
+        console.log('📝 OTP verification response:', response);
+        console.log('🎫 Token from OTP verification:', response.data?.data?.token);
+        
+        // Store the final token after email verification (handle double-nested data structure)
+        const token = response.data?.data?.token || response.data?.token;
+        if (token) {
+          apiUtils.setAuthToken(token);
+          console.log('✅ Final token stored after email verification');
+        } else {
+          console.log('❌ No token received from OTP verification');
+        }
+        
+        // Auto-login the user
+        dispatch(loginUser({ 
+          user: response.data.data?.user || response.data.user,
+          token: token
+        }));
+        
+        dispatch(showToast({ 
+          message: 'Email verified successfully! Welcome to CredoSafe.', 
+          type: 'success' 
+        }));
+        
+        setShowOTPModal(false);
+        navigate('/dashboard');
+      } else {
+        setOtpError(response.error || response.message || 'Invalid OTP. Please try again.');
+      }
     } catch (error) {
+      console.error('OTP verification error:', error);
+      setOtpError('Verification failed. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  // Handle OTP resend
+  const handleOTPResend = async (email) => {
+    try {
+      const response = await apiService.auth.resendOTP(email);
+      
+      if (response.success) {
+        dispatch(showToast({ 
+          message: 'New OTP sent to your email!', 
+          type: 'success' 
+        }));
+      } else {
+        dispatch(showToast({ 
+          message: response.error || 'Failed to resend OTP.', 
+          type: 'error' 
+        }));
+      }
+    } catch (error) {
+      console.error('OTP resend error:', error);
       dispatch(showToast({ 
-        message: 'Signup failed. Please try again.', 
+        message: 'Failed to resend OTP. Please try again.', 
         type: 'error' 
       }));
     }
@@ -328,6 +421,17 @@ const SignUp = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* OTP Verification Modal */}
+      <OTPModal
+        isOpen={showOTPModal}
+        onClose={() => setShowOTPModal(false)}
+        onVerify={handleOTPVerify}
+        onResend={handleOTPResend}
+        email={formData.email}
+        loading={otpLoading}
+        error={otpError}
+      />
     </div>
   );
 };
