@@ -1,5 +1,14 @@
 // API Configuration and Service
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const getApiBaseUrl = () => {
+  // Check if we're in production (on render.com)
+  if (window.location.hostname.includes('onrender.com') || window.location.protocol === 'https:') {
+    return 'https://credosafe.onrender.com/api';
+  }
+  // Development fallback
+  return import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Helper function to get auth token from localStorage
 const getAuthToken = () => {
