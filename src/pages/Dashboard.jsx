@@ -1,5 +1,4 @@
-import React, { useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -15,51 +14,26 @@ import {
   CreditCard
 } from 'lucide-react';
 import { fetchVouchers } from '../store/slices/voucherSlice';
-import { showToast } from '../store/slices/uiSlice';
 import FloatingFooter from '../components/FloatingFooter';
+import apiService from '../api';
 
 const Dashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useSelector((state) => state.auth);
-  const { vouchers, loading } = useSelector((state) => state.vouchers);
+  const { vouchers } = useSelector((state) => state.vouchers);
+  const [userBalance, setUserBalance] = useState(0);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
 
-  // Mock user balance and transactions
-  const userBalance = 1250.75;
-  const recentTransactions = [
-    {
-      id: '1',
-      type: 'funding',
-      amount: 500.00,
-      description: 'Voucher Funding',
-      date: '2024-01-15T10:30:00Z',
-      status: 'completed'
-    },
-    {
-      id: '2',
-      type: 'withdrawal',
-      amount: -150.25,
-      description: 'Voucher Redemption',
-      date: '2024-01-14T14:20:00Z',
-      status: 'completed'
-    },
-    {
-      id: '3',
-      type: 'funding',
-      amount: 750.00,
-      description: 'Work Order Payment',
-      date: '2024-01-13T09:15:00Z',
-      status: 'completed'
-    },
-    {
-      id: '4',
-      type: 'withdrawal',
-      amount: -200.00,
-      description: 'Purchase Escrow Release',
-      date: '2024-01-12T16:45:00Z',
-      status: 'completed'
-    }
-  ];
+  // Convert vouchers to transaction format for display
+  const recentTransactions = vouchers.slice(0, 4).map(voucher => ({
+    id: voucher.id,
+    type: 'funding',
+    amount: parseFloat(voucher.total_amount),
+    description: `${voucher.type.replace('-', ' ').toUpperCase()} Voucher Created`,
+    date: voucher.created_at,
+    status: voucher.status
+  }));
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -69,21 +43,30 @@ const Dashboard = () => {
     
     // Fetch user's vouchers
     dispatch(fetchVouchers());
+
+    // Fetch user's wallet balance
+    const fetchBalance = async () => {
+      try {
+        setIsLoadingBalance(true);
+        const response = await apiService.vouchers.getBalance();
+        if (response.success) {
+          setUserBalance(response.data?.balance || 0);
+        } else {
+          console.error('Failed to fetch balance:', response.error);
+          setUserBalance(0);
+        }
+      } catch (error) {
+        console.error('Balance fetch error:', error);
+        setUserBalance(0);
+      } finally {
+        setIsLoadingBalance(false);
+      }
+    };
+
+    fetchBalance();
   }, [isAuthenticated, navigate, dispatch]);
 
-  const fadeInUp = {
-    initial: { opacity: 0, y: 60 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.6 }
-  };
 
-  const staggerContainer = {
-    animate: {
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -119,47 +102,39 @@ const Dashboard = () => {
       <header className="bg-white shadow-sm border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+            <div 
               className="flex items-center space-x-2"
             >
               <Shield className="w-8 h-8 text-primary-600" />
               <span className="text-xl font-bold text-neutral-900">CredoSafe</span>
-            </motion.div>
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
+            </div>
+            <div 
               className="flex items-center space-x-3"
             >
               <div className="flex items-center space-x-2 text-neutral-600">
                 <User className="w-5 h-5" />
                 <span className="font-medium">{user?.name}</span>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <motion.div
-          variants={staggerContainer}
-          initial="initial"
-          animate="animate"
-        >
+        <div>
           {/* Welcome Section */}
-          <motion.div variants={fadeInUp} className="mb-8">
+          <div className="mb-8">
             <h1 className="text-3xl font-bold text-neutral-900 mb-2">
               Welcome back, {user?.firstName || user?.name}!
             </h1>
             <p className="text-neutral-600">
               Here's your CredoSafe dashboard overview
             </p>
-          </motion.div>
+          </div>
 
           {/* Balance Card */}
-          <motion.div variants={fadeInUp} className="mb-8">
+          <div className="mb-8">
             <div className="bg-gradient-to-r from-primary-600 to-accent-600 rounded-2xl p-6 text-white">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
@@ -169,16 +144,16 @@ const Dashboard = () => {
                 <DollarSign className="w-8 h-8 opacity-80" />
               </div>
               <div className="text-4xl font-bold mb-2">
-                {formatCurrency(userBalance)}
+                {isLoadingBalance ? 'Loading...' : formatCurrency(userBalance)}
               </div>
               <p className="text-primary-100">
                 Available for vouchers and transactions
               </p>
             </div>
-          </motion.div>
+          </div>
 
           {/* Quick Stats */}
-          <motion.div variants={fadeInUp} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white rounded-xl p-6 shadow-soft">
               <div className="flex items-center space-x-3 mb-3">
                 <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
@@ -215,26 +190,31 @@ const Dashboard = () => {
                 <div>
                   <p className="text-sm text-neutral-600">This Month</p>
                   <p className="text-2xl font-bold text-neutral-900">
-                    {formatCurrency(1250.75)}
+                    {formatCurrency(vouchers.reduce((total, voucher) => {
+                      const voucherDate = new Date(voucher.created_at);
+                      const currentDate = new Date();
+                      if (voucherDate.getMonth() === currentDate.getMonth() && 
+                          voucherDate.getFullYear() === currentDate.getFullYear()) {
+                        return total + parseFloat(voucher.total_amount || 0);
+                      }
+                      return total;
+                    }, 0))}
                   </p>
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Recent Transactions */}
-          <motion.div variants={fadeInUp} className="bg-white rounded-2xl shadow-soft overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-soft overflow-hidden">
             <div className="p-6 border-b border-neutral-200">
               <h3 className="text-xl font-bold text-neutral-900">Recent Transactions</h3>
               <p className="text-neutral-600">Your latest funding and redemption activities</p>
             </div>
             <div className="divide-y divide-neutral-200">
-              {recentTransactions.map((transaction, index) => (
-                <motion.div
+              {recentTransactions.map((transaction) => (
+                <div
                   key={transaction.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
                   className="p-6 hover:bg-neutral-50 transition-colors"
                 >
                   <div className="flex items-center justify-between">
@@ -263,7 +243,7 @@ const Dashboard = () => {
                       </span>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
             <div className="p-4 border-t border-neutral-200">
@@ -275,8 +255,8 @@ const Dashboard = () => {
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       </div>
 
       {/* Floating Footer Navigation */}

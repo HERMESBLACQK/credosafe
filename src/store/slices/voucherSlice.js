@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import axios from 'axios';
 
 // Async thunks for vouchers
 export const createVoucher = createAsyncThunk(
@@ -27,32 +28,33 @@ export const fetchVouchers = createAsyncThunk(
   'vouchers/fetchVouchers',
   async (_, { rejectWithValue }) => {
     try {
-      // Simulate API call
-      const response = await new Promise((resolve) => {
-        setTimeout(() => {
-          resolve([
-            {
-              id: '1',
-              type: 'work-order',
-              title: 'Website Development',
-              amount: 5000,
-              status: 'active',
-              createdAt: '2024-01-15T10:00:00Z',
-            },
-            {
-              id: '2',
-              type: 'purchase-escrow',
-              title: 'Laptop Purchase',
-              amount: 1200,
-              status: 'completed',
-              createdAt: '2024-01-10T14:30:00Z',
-            },
-          ]);
-        }, 800);
+      // Check if token exists
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('No token found, returning empty array');
+        return [];
+      }
+
+      // Fetch from backend API
+      const response = await axios.get('http://localhost:5000/api/vouchers', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
-      return response;
+      
+      console.log('Vouchers fetched successfully:', response.data);
+      return response.data.data || [];
     } catch (error) {
-      return rejectWithValue(error.message);
+      console.error('Error fetching vouchers:', error);
+      
+      // If it's a network error (backend not running), return empty array
+      if (error.code === 'ERR_NETWORK' || error.message.includes('Network Error')) {
+        console.log('Backend not available, returning empty array');
+        return [];
+      }
+      
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
 );

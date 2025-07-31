@@ -2,21 +2,21 @@ import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector, useDispatch } from 'react-redux';
 import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react';
-import { hideToast } from '../store/slices/uiSlice';
+import { hideToast } from '../store/slices/toastSlice';
 
 const Toast = () => {
   const dispatch = useDispatch();
-  const { show, message, type } = useSelector((state) => state.ui.toast);
+  const { visible, message, type } = useSelector((state) => state.toast);
 
   useEffect(() => {
-    if (show) {
+    if (visible) {
       const timer = setTimeout(() => {
         dispatch(hideToast());
       }, 5000);
 
       return () => clearTimeout(timer);
     }
-  }, [show, dispatch]);
+  }, [visible, dispatch]);
 
   const getIcon = () => {
     switch (type) {
@@ -44,7 +44,7 @@ const Toast = () => {
     }
   };
 
-  if (!show) return null;
+  if (!visible) return null;
 
   return (
     <AnimatePresence>

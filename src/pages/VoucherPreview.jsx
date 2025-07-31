@@ -1,87 +1,137 @@
 import React, { useState, useEffect } from 'react';
-// eslint-disable-next-line no-unused-vars
-import { motion } from 'framer-motion';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import apiService from '../api';
 import { 
   Shield, 
   ArrowLeft,
-  CreditCard,
-  CheckCircle,
-  X,
-  DollarSign,
-  Calendar,
-  User,
-  Building,
-  Wallet as WalletIcon,
-  Check,
-  AlertCircle,
   Download,
-  Share2
+  Share2,
+  X,
+  Handshake,
+  Lock,
+  Gift,
+  CreditCard,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
 
 const VoucherPreview = () => {
+  const { voucherId } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [withdrawalMethod, setWithdrawalMethod] = useState('wallet');
-  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isRedeeming, setIsRedeeming] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
-
-  // Mock voucher data based on the method used
-  const [voucherData, setVoucherData] = useState(null);
-  const [withdrawForm, setWithdrawForm] = useState({
-    accountNumber: '',
-    bankName: '',
-    accountName: ''
-  });
-
-  const banks = [
-    'Access Bank',
-    'First Bank',
-    'GT Bank',
-    'Zenith Bank',
-    'UBA',
-    'Stanbic IBTC',
-    'Fidelity Bank',
-    'Union Bank',
-    'Wema Bank',
-    'Ecobank'
-  ];
+  const { vouchers } = useSelector((state) => state.vouchers);
+  const [selectedVoucher, setSelectedVoucher] = useState(null);
+  const [themes, setThemes] = useState({});
+  const [loadingThemes, setLoadingThemes] = useState(false);
+  const [isReleasingMilestone, setIsReleasingMilestone] = useState(false);
+  const [isActivatingVoucher, setIsActivatingVoucher] = useState(false);
 
   useEffect(() => {
-    // Simulate fetching voucher data based on the method
-    const method = location.state?.method || 'code';
-    const code = location.state?.voucherCode || 'DEMO-CODE-123';
+    console.log('🔍 VoucherPreview useEffect triggered');
+    console.log('🔍 voucherId from params:', voucherId);
+    console.log('🔍 vouchers from Redux:', vouchers);
+    console.log('🔍 vouchers length:', vouchers?.length);
     
-    // Mock voucher data
-    const mockVoucherData = {
-      id: 'VCH-001',
-      code: code,
-      type: 'Gift Card',
-      amount: 50000,
-      availableAmount: 50000,
-      sender: 'John Doe',
-      recipient: 'Jane Smith',
-      issueDate: '2024-01-15T10:30:00Z',
-      expiryDate: '2024-12-31T23:59:59Z',
-      status: 'active',
-      description: 'Birthday Gift Card',
-      design: 'premium',
-      isAnonymous: false,
-      message: 'Happy Birthday! Enjoy your special day.',
-      method: method
+    // Find the voucher by ID
+    const voucher = vouchers.find(v => v.id === parseInt(voucherId));
+    console.log('🔍 Found voucher in Redux:', voucher);
+    
+    if (voucher) {
+      console.log('✅ Using voucher from Redux store');
+      console.log('📋 Voucher details:', voucher);
+      setSelectedVoucher({
+        id: voucher.id,
+        type: 'funding',
+        amount: parseFloat(voucher.total_amount),
+        description: `${voucher.type.replace('-', ' ').toUpperCase()} Voucher Created`,
+        date: voucher.created_at,
+        status: voucher.status,
+        reference: voucher.voucher_code,
+        category: voucher.type.replace('-', ' ').toUpperCase(),
+        voucherType: voucher.type,
+        voucherData: voucher
+      });
+    } else {
+      console.log('❌ Voucher not found in Redux store, fetching from API');
+      // If voucher not found in Redux store, fetch it from API
+      fetchVoucherFromAPI();
+    }
+
+    // Fetch themes for all voucher types
+    const fetchThemes = async () => {
+      try {
+        console.log('🎨 Fetching themes for voucher types');
+        setLoadingThemes(true);
+        const voucherTypes = ['gift_card', 'work_order', 'purchase_escrow', 'prepaid'];
+        const themesData = {};
+        
+        for (const voucherType of voucherTypes) {
+          console.log(`🎨 Fetching themes for ${voucherType}`);
+          const response = await apiService.themes.getByVoucherType(voucherType);
+          console.log(`🎨 ${voucherType} themes response:`, response);
+          if (response.success) {
+            themesData[voucherType] = response.data || [];
+            console.log(`🎨 ${voucherType} themes data:`, themesData[voucherType]);
+          }
+        }
+        
+        console.log('🎨 All themes data:', themesData);
+        setThemes(themesData);
+      } catch (error) {
+        console.error('❌ Themes fetch error:', error);
+      } finally {
+        setLoadingThemes(false);
+      }
     };
 
-    setVoucherData(mockVoucherData);
-  }, [location.state]);
+    fetchThemes();
+  }, [voucherId, vouchers]);
 
-  const fadeInUp = {
-    initial: { opacity: 0, y: 60 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.6 }
+  const fetchVoucherFromAPI = async () => {
+    try {
+      console.log('🔍 Fetching voucher from API with ID:', voucherId);
+      const response = await apiService.vouchers.getById(voucherId);
+      
+      console.log('📡 Server response:', response);
+      console.log('📡 Response success:', response.success);
+      console.log('📡 Response message:', response.message);
+      console.log('📡 Response data:', response.data);
+      
+      if (response.success) {
+        const voucher = response.data;
+        console.log('✅ Voucher data received:', voucher);
+        console.log('📋 Voucher type:', voucher.type);
+        console.log('💰 Total amount:', voucher.total_amount);
+        console.log('📋 Milestones:', voucher.milestones);
+        console.log('📋 Milestones length:', voucher.milestones?.length);
+        
+        setSelectedVoucher({
+          id: voucher.id,
+          type: 'funding',
+          amount: parseFloat(voucher.total_amount),
+          description: `${voucher.type.replace('-', ' ').toUpperCase()} Voucher Created`,
+          date: voucher.created_at,
+          status: voucher.status,
+          reference: voucher.voucher_code,
+          category: voucher.type.replace('-', ' ').toUpperCase(),
+          voucherType: voucher.type,
+          voucherData: voucher
+        });
+      } else {
+        console.error('❌ Failed to fetch voucher:', response.message);
+        console.error('❌ Response error details:', response);
+        navigate('/transactions');
+      }
+    } catch (error) {
+      console.error('❌ Voucher fetch error:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        response: error.response
+      });
+      navigate('/transactions');
+    }
   };
 
   const formatCurrency = (amount) => {
@@ -94,50 +144,212 @@ const VoucherPreview = () => {
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric'
     });
   };
 
-  const verifyAccount = async () => {
-    if (withdrawForm.accountNumber && withdrawForm.bankName) {
-      setIsVerifying(true);
-      // Simulate API call
-      setTimeout(() => {
-        setWithdrawForm(prev => ({
-          ...prev,
-          accountName: 'Jane Smith'
-        }));
-        setIsVerified(true);
-        setIsVerifying(false);
-      }, 2000);
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed':
+        return 'text-green-600 bg-green-100';
+      case 'active':
+      case 'available':
+        return 'text-blue-600 bg-blue-100';
+      case 'pending':
+        return 'text-yellow-600 bg-yellow-100';
+      case 'failed':
+        return 'text-red-600 bg-red-100';
+      default:
+        return 'text-neutral-600 bg-neutral-100';
     }
   };
 
-  const handleRedeem = async (e) => {
-    e.preventDefault();
-    if (withdrawalMethod === 'bank' && !isVerified) {
-      return;
+  const getVoucherTheme = (voucherType, themeName) => {
+    const themeTypeMap = {
+      'work-order': 'work_order',
+      'work_order': 'work_order',
+      'purchase_escrow': 'purchase_escrow',
+      'gift-card': 'gift_card',
+      'gift_card': 'gift_card',
+      'prepaid': 'prepaid'
+    };
+    
+    const themeType = themeTypeMap[voucherType] || voucherType;
+    
+    if (!themes[themeType] || !Array.isArray(themes[themeType])) {
+      return null;
     }
-
-    setIsRedeeming(true);
-    // Simulate redemption process
-    setTimeout(() => {
-      setIsRedeeming(false);
-      setShowWithdrawModal(false);
-      setShowSuccessModal(true);
-    }, 3000);
+    
+    if (themeName) {
+      const foundTheme = themes[themeType].find(t => t.name === themeName);
+      if (foundTheme) {
+        return foundTheme;
+      }
+    }
+    
+    return themes[themeType][0] || null;
   };
 
-  const handleGoHome = () => {
-    navigate('/dashboard');
+  const getVoucherThemeBackground = (voucherType, themeName = null) => {
+    const theme = getVoucherTheme(voucherType, themeName);
+    if (theme) {
+      return `bg-gradient-to-br ${theme.gradient_colors}`;
+    }
+    
+    switch (voucherType) {
+      case 'work-order':
+        return 'bg-gradient-to-br from-blue-500 to-blue-600';
+      case 'escrow':
+      case 'purchase_escrow':
+        return 'bg-gradient-to-br from-green-500 to-green-600';
+      case 'gift-card':
+        return 'bg-gradient-to-br from-pink-500 to-purple-600';
+      case 'prepaid':
+        return 'bg-gradient-to-br from-purple-500 to-purple-600';
+      default:
+        return 'bg-gradient-to-br from-gray-500 to-gray-600';
+    }
   };
 
-  if (!voucherData) {
+  const getVoucherIcon = (voucherType, themeName = null) => {
+    const theme = getVoucherTheme(voucherType, themeName);
+    if (theme) {
+      return <span className="text-2xl">{theme.icon_emoji}</span>;
+    }
+    
+    switch (voucherType) {
+      case 'work-order':
+        return <Handshake className="w-8 h-8 text-white" />;
+      case 'escrow':
+      case 'purchase_escrow':
+        return <Lock className="w-8 h-8 text-white" />;
+      case 'gift-card':
+        return <Gift className="w-8 h-8 text-white" />;
+      case 'prepaid':
+        return <CreditCard className="w-8 h-8 text-white" />;
+      default:
+        return <CreditCard className="w-8 h-8 text-white" />;
+    }
+  };
+
+  const getVoucherTitle = (voucherType) => {
+    switch (voucherType) {
+      case 'work-order':
+        return 'Work Order Voucher';
+      case 'escrow':
+      case 'purchase_escrow':
+        return 'Escrow Voucher';
+      case 'gift-card':
+        return 'Gift Card';
+      case 'prepaid':
+        return 'Prepaid Voucher';
+      default:
+        return 'Voucher';
+    }
+  };
+
+  const getVoucherSubtitle = (voucherType) => {
+    switch (voucherType) {
+      case 'work-order':
+        return 'CredoSafe Secure Transaction';
+      case 'escrow':
+      case 'purchase_escrow':
+        return 'Secure Transaction Protection';
+      case 'gift-card':
+        return 'CredoSafe Digital Gift';
+      case 'prepaid':
+        return 'Digital Wallet Credit';
+      default:
+        return 'CredoSafe Voucher';
+    }
+  };
+
+  const handleDownloadVoucher = () => {
+    console.log('Downloading voucher:', selectedVoucher?.reference);
+  };
+
+  const handleShareVoucher = () => {
+    console.log('Sharing voucher:', selectedVoucher?.reference);
+  };
+
+  const handleReleaseMilestone = async () => {
+    if (!selectedVoucher?.voucherData?.id) return;
+    
+    setIsReleasingMilestone(true);
+    try {
+      console.log('🔍 Releasing milestone for voucher:', selectedVoucher.voucherData.id);
+      const response = await apiService.vouchers.releaseMilestone(selectedVoucher.voucherData.id);
+      
+      console.log('📡 Release milestone response:', response);
+      
+      if (response.success) {
+        console.log('✅ Milestone released successfully');
+        alert(`Milestone "${response.data.milestoneName}" released successfully! Amount: ${formatCurrency(response.data.amount)}`);
+        
+        // Refresh the voucher data
+        if (selectedVoucher.voucherData.id) {
+          const voucherResponse = await apiService.vouchers.getById(selectedVoucher.voucherData.id);
+          if (voucherResponse.success) {
+            setSelectedVoucher(prev => ({
+              ...prev,
+              voucherData: voucherResponse.data
+            }));
+          }
+        }
+      } else {
+        console.error('❌ Failed to release milestone:', response.message);
+        alert(`Failed to release milestone: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error releasing milestone:', error);
+      alert('Error releasing milestone. Please try again.');
+    } finally {
+      setIsReleasingMilestone(false);
+    }
+  };
+
+  const handleActivateVoucher = async () => {
+    if (!selectedVoucher?.voucherData?.id) return;
+    
+    setIsActivatingVoucher(true);
+    try {
+      console.log('🔍 Activating voucher:', selectedVoucher.voucherData.id);
+      const response = await apiService.vouchers.activateVoucher(selectedVoucher.voucherData.id);
+      
+      console.log('📡 Activate voucher response:', response);
+      
+      if (response.success) {
+        console.log('✅ Voucher activated successfully');
+        alert('Voucher activated successfully!');
+        
+        // Refresh the voucher data
+        if (selectedVoucher.voucherData.id) {
+          const voucherResponse = await apiService.vouchers.getById(selectedVoucher.voucherData.id);
+          if (voucherResponse.success) {
+            setSelectedVoucher(prev => ({
+              ...prev,
+              voucherData: voucherResponse.data
+            }));
+          }
+        }
+      } else {
+        console.error('❌ Failed to activate voucher:', response.message);
+        alert(`Failed to activate voucher: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error activating voucher:', error);
+      alert('Error activating voucher. Please try again.');
+    } finally {
+      setIsActivatingVoucher(false);
+    }
+  };
+
+  if (!selectedVoucher) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-primary-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
           <p className="text-neutral-600">Loading voucher details...</p>
         </div>
       </div>
@@ -150,356 +362,445 @@ const VoucherPreview = () => {
       <header className="bg-white shadow-sm border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-2"
-            >
-              <Shield className="w-8 h-8 text-primary-600" />
-              <span className="text-xl font-bold text-neutral-900">CredoSafe</span>
-            </motion.div>
-            <motion.button 
-              onClick={() => navigate('/redeem')}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-2 text-neutral-600 hover:text-primary-600 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back to Redeem</span>
-            </motion.button>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => navigate('/transactions')}
+                className="flex items-center space-x-2 text-neutral-600 hover:text-primary-600 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span>Back to Transactions</span>
+              </button>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleDownloadVoucher}
+                className="p-2 text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
+                title="Download Voucher"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+              <button
+                onClick={handleShareVoucher}
+                className="p-2 text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
+                title="Share Voucher"
+              >
+                <Share2 className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <motion.div
-          variants={fadeInUp}
-          initial="initial"
-          animate="animate"
-        >
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-neutral-900 mb-2">Voucher Preview</h1>
-            <p className="text-neutral-600">Review voucher details and choose withdrawal method</p>
+        <div className="space-y-6">
+          {/* Page Header */}
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-neutral-900 mb-2">
+              {selectedVoucher.category} Voucher Details
+            </h1>
+            <p className="text-neutral-600">Ref: {selectedVoucher.reference}</p>
           </div>
 
-          {/* Voucher Details Card */}
-          <div className="bg-white rounded-2xl shadow-soft p-6 mb-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-neutral-900">Voucher Details</h2>
-              <div className="flex space-x-2">
-                <button className="p-2 text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors">
-                  <Download className="w-5 h-5" />
-                </button>
-                <button className="p-2 text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors">
-                  <Share2 className="w-5 h-5" />
-                </button>
-              </div>
+          {/* Loading indicator for themes */}
+          {loadingThemes && (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+              <p className="text-neutral-600 mt-2">Loading voucher theme...</p>
             </div>
+          )}
+          
+          {/* Voucher Details */}
+          <div className="space-y-6">
+            {/* Voucher Preview Card */}
+            <div className={`border-2 border-neutral-200 rounded-lg p-6 ${getVoucherThemeBackground(selectedVoucher.voucherType, selectedVoucher.voucherData.theme)} text-white`}>
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  {getVoucherIcon(selectedVoucher.voucherType, selectedVoucher.voucherData.theme)}
+                </div>
+                <h3 className="text-2xl font-bold mb-2">{getVoucherTitle(selectedVoucher.voucherType)}</h3>
+                <p className="text-white/80">{getVoucherSubtitle(selectedVoucher.voucherType)}</p>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Left Column - Voucher Info */}
               <div className="space-y-4">
-                <div className="bg-gradient-to-r from-primary-500 to-accent-600 rounded-lg p-4 text-white">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm opacity-90">Available Amount</span>
-                    <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">Active</span>
-                  </div>
-                  <p className="text-3xl font-bold">{formatCurrency(voucherData.availableAmount)}</p>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-neutral-600">Voucher Code:</span>
-                    <span className="font-mono font-medium">{voucherData.code}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-neutral-600">Type:</span>
-                    <span className="font-medium">{voucherData.type}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-neutral-600">Original Amount:</span>
-                    <span className="font-medium">{formatCurrency(voucherData.amount)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-neutral-600">From:</span>
-                    <span className="font-medium">{voucherData.sender}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-neutral-600">To:</span>
-                    <span className="font-medium">{voucherData.recipient}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column - Additional Details */}
-              <div className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-neutral-600">Issue Date:</span>
-                    <span className="font-medium">{formatDate(voucherData.issueDate)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-neutral-600">Expiry Date:</span>
-                    <span className="font-medium">{formatDate(voucherData.expiryDate)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-neutral-600">Status:</span>
-                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
-                      {voucherData.status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-neutral-600">Method:</span>
-                    <span className="font-medium capitalize">{voucherData.method}</span>
-                  </div>
-                </div>
-
-                {voucherData.message && (
-                  <div className="bg-neutral-50 rounded-lg p-4">
-                    <h4 className="font-medium text-neutral-900 mb-2">Message from Sender</h4>
-                    <p className="text-neutral-700 italic">"{voucherData.message}"</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Withdrawal Options */}
-          <div className="bg-white rounded-2xl shadow-soft p-6 mb-6">
-            <h2 className="text-xl font-bold text-neutral-900 mb-6">Choose Withdrawal Method</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <button
-                onClick={() => setWithdrawalMethod('wallet')}
-                className={`p-4 border-2 rounded-lg transition-colors ${
-                  withdrawalMethod === 'wallet'
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-neutral-200 hover:border-neutral-300'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    withdrawalMethod === 'wallet' ? 'bg-primary-600' : 'bg-neutral-100'
-                  }`}>
-                    <WalletIcon className={`w-5 h-5 ${
-                      withdrawalMethod === 'wallet' ? 'text-white' : 'text-neutral-600'
-                    }`} />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="font-semibold text-neutral-900">Wallet</h3>
-                    <p className="text-sm text-neutral-600">Add to your CredoSafe wallet</p>
-                  </div>
-                  {withdrawalMethod === 'wallet' && (
-                    <CheckCircle className="w-5 h-5 text-primary-600 ml-auto" />
-                  )}
-                </div>
-              </button>
-
-              <button
-                onClick={() => setWithdrawalMethod('bank')}
-                className={`p-4 border-2 rounded-lg transition-colors ${
-                  withdrawalMethod === 'bank'
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-neutral-200 hover:border-neutral-300'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    withdrawalMethod === 'bank' ? 'bg-primary-600' : 'bg-neutral-100'
-                  }`}>
-                    <Building className={`w-5 h-5 ${
-                      withdrawalMethod === 'bank' ? 'text-white' : 'text-neutral-600'
-                    }`} />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="font-semibold text-neutral-900">Bank Transfer</h3>
-                    <p className="text-sm text-neutral-600">Transfer to your bank account</p>
-                  </div>
-                  {withdrawalMethod === 'bank' && (
-                    <CheckCircle className="w-5 h-5 text-primary-600 ml-auto" />
-                  )}
-                </div>
-              </button>
-            </div>
-
-            <button
-              onClick={() => setShowWithdrawModal(true)}
-              className="w-full bg-primary-600 text-white py-3 px-4 rounded-lg hover:bg-primary-700 transition-colors font-semibold flex items-center justify-center space-x-2"
-            >
-              <CreditCard className="w-5 h-5" />
-              <span>Redeem Voucher</span>
-            </button>
-          </div>
-
-          {/* Important Notice */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="w-6 h-6 text-yellow-600 mt-1 flex-shrink-0" />
-              <div>
-                <h3 className="font-semibold text-yellow-900 mb-2">Important Information</h3>
-                <ul className="text-yellow-800 space-y-1 text-sm">
-                  <li>• Voucher redemption is irreversible once completed</li>
-                  <li>• Bank transfers may take 1-3 business days</li>
-                  <li>• Wallet credits are instant and available immediately</li>
-                  <li>• Ensure your bank details are correct before proceeding</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Withdrawal Modal */}
-      {showWithdrawModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white rounded-2xl shadow-large max-w-md w-full p-6"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-neutral-900">
-                {withdrawalMethod === 'wallet' ? 'Add to Wallet' : 'Bank Transfer'}
-              </h2>
-              <button
-                onClick={() => setShowWithdrawModal(false)}
-                className="p-2 text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleRedeem} className="space-y-4">
-              {withdrawalMethod === 'wallet' ? (
-                <div className="text-center py-4">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <WalletIcon className="w-8 h-8 text-green-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-neutral-900 mb-2">
-                    Add to Wallet
-                  </h3>
-                  <p className="text-neutral-600 mb-4">
-                    {formatCurrency(voucherData.availableAmount)} will be added to your CredoSafe wallet instantly.
+                {/* Amount Display */}
+                <div className="bg-white/20 rounded-lg p-4 text-center">
+                  <p className="text-white/80 mb-1">
+                    {selectedVoucher.voucherType === 'gift-card' ? 'Gift Amount' : 
+                     selectedVoucher.voucherType === 'prepaid' ? 'Available Balance' : 'Available Amount'}
+                  </p>
+                  <p className="text-3xl font-bold text-white">
+                    {formatCurrency(selectedVoucher.voucherData.available_amount || selectedVoucher.voucherData.total_amount || 0)}
                   </p>
                 </div>
-              ) : (
-                <>
+
+                {/* Voucher Code and Barcode */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-2">
-                      Account Number
-                    </label>
-                    <input
-                      type="text"
-                      value={withdrawForm.accountNumber}
-                      onChange={(e) => setWithdrawForm(prev => ({ ...prev, accountNumber: e.target.value }))}
-                      className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder="Enter account number"
-                      required
-                    />
+                    <p className="text-white/80 mb-1">Voucher Code</p>
+                    <p className="font-mono text-sm font-medium text-white bg-white/20 px-3 py-2 rounded border">
+                      {selectedVoucher.voucherData.voucher_code || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-white/80 mb-1">Barcode</p>
+                    <p className="font-mono text-sm font-medium text-white bg-white/20 px-3 py-2 rounded border">
+                      {selectedVoucher.voucherData.barcode || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Status */}
+                <div className="text-center">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${getStatusColor(selectedVoucher.voucherData.status)}`}>
+                    {selectedVoucher.voucherData.status || 'N/A'}
+                  </span>
+                </div>
+
+                {/* Footer */}
+                <div className="border-t border-white/20 pt-4">
+                  <p className="text-xs text-white/60">
+                    Voucher ID: {selectedVoucher.voucherType === 'gift-card' ? 'GC' : 
+                               selectedVoucher.voucherType === 'escrow' || selectedVoucher.voucherType === 'purchase_escrow' ? 'ESC' :
+                               selectedVoucher.voucherType === 'prepaid' ? 'PP' : 'WO'}-{Date.now().toString().slice(-8)}
+                  </p>
+                  <p className="text-xs text-white/60">
+                    Created: {formatDate(selectedVoucher.voucherData.created_at)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Voucher Type Specific Details */}
+            {(() => {
+              console.log('🔍 Checking voucher type for rendering:');
+              console.log('🔍 selectedVoucher.voucherType:', selectedVoucher.voucherType);
+              console.log('🔍 Should render work order:', selectedVoucher.voucherType === 'work-order' || selectedVoucher.voucherType === 'work_order');
+              return selectedVoucher.voucherType === 'work-order' || selectedVoucher.voucherType === 'work_order';
+            })() && (
+              <div className="bg-white border border-neutral-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-neutral-900 mb-4">Work Order Details</h3>
+                <div className="space-y-4">
+                  {/* Project Details */}
+                  <div className="bg-neutral-50 rounded-lg p-4">
+                    <h4 className="font-semibold mb-2">Project Details</h4>
+                    <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.title || 'Project Title'}</p>
+                    <p className="text-sm text-neutral-600 mt-1">{selectedVoucher.voucherData.description || 'Project description'}</p>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-2">
-                      Bank Name
-                    </label>
-                    <select
-                      value={withdrawForm.bankName}
-                      onChange={(e) => setWithdrawForm(prev => ({ ...prev, bankName: e.target.value }))}
-                      className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      required
-                    >
-                      <option value="">Select Bank</option>
-                      {banks.map((bank) => (
-                        <option key={bank} value={bank}>{bank}</option>
-                      ))}
-                    </select>
+                  {/* Client and Amount */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-neutral-50 rounded-lg p-4">
+                      <p className="text-neutral-600 mb-1">Client</p>
+                      <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.client_name || 'Client Name'}</p>
+                    </div>
+                    <div className="bg-neutral-50 rounded-lg p-4">
+                      <p className="text-neutral-600 mb-1">Client Email</p>
+                      <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.client_email || 'N/A'}</p>
+                    </div>
+                    <div className="bg-neutral-50 rounded-lg p-4">
+                      <p className="text-neutral-600 mb-1">Available Amount</p>
+                      <p className="text-2xl font-bold text-blue-600">{formatCurrency(selectedVoucher.voucherData.available_amount || selectedVoucher.voucherData.total_amount || 0)}</p>
+                    </div>
+                    <div className="bg-neutral-50 rounded-lg p-4">
+                      <p className="text-neutral-600 mb-1">Total Amount</p>
+                      <p className="text-lg font-semibold text-neutral-700">{formatCurrency(selectedVoucher.voucherData.total_amount || 0)}</p>
+                    </div>
+                    <div className="bg-neutral-50 rounded-lg p-4">
+                      <p className="text-neutral-600 mb-1">Payment Type</p>
+                      <p className="font-medium text-neutral-900 capitalize">{selectedVoucher.voucherData.payment_type || 'Full Payment'}</p>
+                    </div>
                   </div>
 
-                  {withdrawForm.accountNumber && withdrawForm.bankName && (
-                    <div className="flex space-x-3">
-                      <button
-                        type="button"
-                        onClick={verifyAccount}
-                        disabled={isVerifying}
-                        className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                      >
-                        {isVerifying ? 'Verifying...' : 'Verify Account'}
-                      </button>
+                  {/* Due Date */}
+                  {selectedVoucher.voucherData.due_date && (
+                    <div className="bg-neutral-50 rounded-lg p-4">
+                      <p className="text-neutral-600 mb-1">Due Date</p>
+                      <p className="font-medium text-neutral-900">{formatDate(selectedVoucher.voucherData.due_date)}</p>
                     </div>
                   )}
 
-                  {isVerified && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="flex items-center space-x-2">
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                        <div>
-                          <p className="text-sm font-medium text-green-900">Account Verified</p>
-                          <p className="text-sm text-green-700">{withdrawForm.accountName}</p>
+                  {/* Terms */}
+                  {selectedVoucher.voucherData.terms && (
+                    <div className="bg-neutral-50 rounded-lg p-4">
+                      <p className="text-neutral-600 mb-1">Terms & Conditions</p>
+                      <p className="text-neutral-900">{selectedVoucher.voucherData.terms}</p>
+                    </div>
+                  )}
+
+                  {/* Milestones Section */}
+                  {(() => {
+                    console.log('🔍 Checking milestones for rendering:');
+                    console.log('🔍 selectedVoucher.voucherData.milestones:', selectedVoucher.voucherData.milestones);
+                    console.log('🔍 Is array:', Array.isArray(selectedVoucher.voucherData.milestones));
+                    console.log('🔍 Length:', selectedVoucher.voucherData.milestones?.length);
+                    console.log('🔍 Should render:', selectedVoucher.voucherData.milestones && Array.isArray(selectedVoucher.voucherData.milestones) && selectedVoucher.voucherData.milestones.length > 0);
+                    
+                    return selectedVoucher.voucherData.milestones && Array.isArray(selectedVoucher.voucherData.milestones) && selectedVoucher.voucherData.milestones.length > 0;
+                  })() && (
+                    <div className="bg-neutral-50 rounded-lg p-4">
+                      <h4 className="font-semibold mb-3">Payment Milestones</h4>
+                      <div className="space-y-2">
+                        {selectedVoucher.voucherData.milestones.map((milestone, index) => {
+                          console.log(`🔍 Rendering milestone ${index}:`, milestone);
+                          return (
+                            <div key={milestone.id || index} className="flex justify-between items-center">
+                              <div>
+                                <p className="font-medium text-neutral-900">{milestone.name || `Milestone ${index + 1}`}</p>
+                                <p className="text-sm text-neutral-600">{parseFloat(milestone.percentage) || 0}%</p>
+                              </div>
+                              <div className="text-right">
+                                <span className="font-bold text-blue-600">{formatCurrency(parseFloat(milestone.amount) || 0)}</span>
+                                <div className="mt-1">
+                                                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                              milestone.status === 'completed' ? 'bg-green-100 text-green-600' : 
+                              milestone.status === 'available' ? 'bg-blue-100 text-blue-600' :
+                              milestone.status === 'pending' ? 'bg-yellow-100 text-yellow-600' : 
+                              'bg-neutral-100 text-neutral-600'
+                            }`}>
+                              {milestone.status || 'pending'}
+                            </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      
+                      {/* Milestones Summary */}
+                      <div className="mt-4 bg-blue-100 rounded-lg p-4">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="font-medium text-neutral-900">Total Milestones:</span>
+                          <span className="font-bold text-blue-600">{selectedVoucher.voucherData.milestones.length}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm mt-1">
+                          <span className="text-neutral-600">Total Percentage:</span>
+                          <span className="font-medium text-neutral-900">
+                            {selectedVoucher.voucherData.milestones.reduce((sum, m) => sum + (parseFloat(m.percentage) || 0), 0)}%
+                          </span>
                         </div>
                       </div>
                     </div>
                   )}
-                </>
-              )}
+                </div>
+              </div>
+            )}
 
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowWithdrawModal(false)}
-                  className="flex-1 px-4 py-3 border border-neutral-300 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isRedeeming || (withdrawalMethod === 'bank' && !isVerified)}
-                  className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-                >
-                  {isRedeeming ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Processing...</span>
+            {(selectedVoucher.voucherType === 'escrow' || selectedVoucher.voucherType === 'purchase_escrow') && (
+              <div className="bg-white border border-neutral-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-neutral-900 mb-4">Escrow Details</h3>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-neutral-600 mb-1">Item Title</p>
+                    <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.title || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-600 mb-1">Item Description</p>
+                    <p className="text-neutral-900">{selectedVoucher.voucherData.description || 'No description provided'}</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Seller Name</p>
+                      <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.seller_name || 'N/A'}</p>
                     </div>
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Seller Email</p>
+                      <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.seller_email || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Buyer Name</p>
+                      <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.buyer_name || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Buyer Email</p>
+                      <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.buyer_email || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Item Value</p>
+                      <p className="font-medium text-neutral-900">{formatCurrency(selectedVoucher.voucherData.item_value || 0)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Shipping Method</p>
+                      <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.shipping_method || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedVoucher.voucherType === 'gift-card' && (
+              <div className="bg-white border border-neutral-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-neutral-900 mb-4">Gift Card Details</h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Recipient Name</p>
+                      <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.recipient_name || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Recipient Email</p>
+                      <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.recipient_email || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Sender Name</p>
+                      <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.sender_name || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Sender Email</p>
+                      <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.sender_email || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Theme</p>
+                      <p className="font-medium text-neutral-900 capitalize">{selectedVoucher.voucherData.theme || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Delivery Method</p>
+                      <p className="font-medium text-neutral-900 capitalize">{selectedVoucher.voucherData.delivery_method || 'N/A'}</p>
+                    </div>
+                  </div>
+                  {selectedVoucher.voucherData.message && (
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Message</p>
+                      <p className="text-neutral-900 italic">"{selectedVoucher.voucherData.message}"</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {selectedVoucher.voucherType === 'prepaid' && (
+              <div className="bg-white border border-neutral-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-neutral-900 mb-4">Prepaid Voucher Details</h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Recipient Name</p>
+                      <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.recipient_name || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Recipient Email</p>
+                      <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.recipient_email || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Recipient Phone</p>
+                      <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.recipient_phone || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Business Category</p>
+                      <p className="font-medium text-neutral-900 capitalize">{selectedVoucher.voucherData.business_category || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Expiry Date</p>
+                      <p className="font-medium text-neutral-900">
+                        {selectedVoucher.voucherData.expiry_date ? formatDate(selectedVoucher.voucherData.expiry_date) : 'No expiry'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Auto Reload</p>
+                      <p className="font-medium text-neutral-900">
+                        {selectedVoucher.voucherData.auto_reload ? 'Enabled' : 'Disabled'}
+                      </p>
+                    </div>
+                  </div>
+                  {selectedVoucher.voucherData.message && (
+                    <div>
+                      <p className="text-sm text-neutral-600 mb-1">Message</p>
+                      <p className="text-neutral-900 italic">"{selectedVoucher.voucherData.message}"</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            {(() => {
+              console.log('🔍 Action Buttons Debug:');
+              console.log('🔍 Voucher Type:', selectedVoucher.voucherType);
+              console.log('🔍 Voucher Status:', selectedVoucher.voucherData.status);
+              console.log('🔍 Is Work Order:', selectedVoucher.voucherType === 'work_order');
+              console.log('🔍 Is Active:', selectedVoucher.voucherData.status === 'active');
+              console.log('🔍 Is Purchase Escrow:', selectedVoucher.voucherType === 'purchase_escrow' || selectedVoucher.voucherType === 'purchase-escrow');
+              console.log('🔍 Is Active (for purchase):', selectedVoucher.voucherData.status === 'active');
+              return true;
+            })()}
+            
+            {selectedVoucher.voucherType === 'work_order' && selectedVoucher.voucherData.status === 'active' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 mb-3">Work Order Actions</h3>
+                <button
+                  onClick={handleReleaseMilestone}
+                  disabled={isReleasingMilestone}
+                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                  {isReleasingMilestone ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Releasing...</span>
+                    </>
                   ) : (
-                    'Redeem Now'
+                    <>
+                      <span>🎯</span>
+                      <span>Release Milestone Funds</span>
+                    </>
                   )}
                 </button>
+                <p className="text-sm text-blue-700 mt-2">
+                  Release the next pending milestone to make funds available for withdrawal
+                </p>
               </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
+            )}
 
-      {/* Success Modal */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white rounded-2xl shadow-large max-w-md w-full p-6 text-center"
-          >
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-green-600" />
+            {(selectedVoucher.voucherType === 'purchase_escrow' || selectedVoucher.voucherType === 'purchase-escrow' || selectedVoucher.voucherType === 'escrow') && selectedVoucher.voucherData.status === 'active' && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h3 className="font-semibold text-green-900 mb-3">Purchase Actions</h3>
+                <button
+                  onClick={handleActivateVoucher}
+                  disabled={isActivatingVoucher}
+                  className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                  {isActivatingVoucher ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Making Available...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>✅</span>
+                      <span>Make Available for Redemption</span>
+                    </>
+                  )}
+                </button>
+                <p className="text-sm text-green-700 mt-2">
+                  Change voucher status to 'available' so it can be redeemed for withdrawal
+                </p>
+              </div>
+            )}
+
+            {/* Transaction Details */}
+            <div className="bg-neutral-50 rounded-lg p-4">
+              <h3 className="font-semibold text-neutral-900 mb-3">Transaction Information</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-neutral-600">Transaction Type</p>
+                  <p className="font-medium text-neutral-900 capitalize">{selectedVoucher.type}</p>
+                </div>
+                <div>
+                  <p className="text-neutral-600">Amount</p>
+                  <p className="font-medium text-neutral-900">{formatCurrency(selectedVoucher.amount)}</p>
+                </div>
+                <div>
+                  <p className="text-neutral-600">Status</p>
+                  <p className="font-medium text-neutral-900 capitalize">{selectedVoucher.status}</p>
+                </div>
+                <div>
+                  <p className="text-neutral-600">Date</p>
+                  <p className="font-medium text-neutral-900">{formatDate(selectedVoucher.date)}</p>
+                </div>
+              </div>
             </div>
-            <h2 className="text-xl font-bold text-neutral-900 mb-2">Redemption Successful!</h2>
-            <p className="text-neutral-600 mb-6">
-              {withdrawalMethod === 'wallet' 
-                ? `${formatCurrency(voucherData.availableAmount)} has been added to your wallet.`
-                : `${formatCurrency(voucherData.availableAmount)} will be transferred to your bank account within 1-3 business days.`
-              }
-            </p>
-            <button
-              onClick={handleGoHome}
-              className="w-full bg-primary-600 text-white py-3 px-4 rounded-lg hover:bg-primary-700 transition-colors font-semibold"
-            >
-              Go Home
-            </button>
-          </motion.div>
+          </div>
         </div>
-      )}
+      </div>
       
       {/* Floating Footer Navigation */}
       <FloatingFooter />
@@ -507,4 +808,4 @@ const VoucherPreview = () => {
   );
 };
 
-export default VoucherPreview; 
+export default VoucherPreview;

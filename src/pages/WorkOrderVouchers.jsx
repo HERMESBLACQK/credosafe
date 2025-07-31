@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -18,11 +18,18 @@ import {
   EyeOff
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
+import apiService from '../api';
+import { useDispatch } from 'react-redux';
+import { showToast } from '../store/slices/toastSlice';
 
 const WorkOrderVouchers = () => {
   const navigate = useNavigate();
-  const [selectedDesign, setSelectedDesign] = useState(1);
+  const dispatch = useDispatch();
+  const [selectedDesign, setSelectedDesign] = useState('professional');
   const [showBalance, setShowBalance] = useState(true);
+  const [userBalance, setUserBalance] = useState(0);
+  const [themes, setThemes] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     projectTitle: '',
     clientName: '',
@@ -36,6 +43,48 @@ const WorkOrderVouchers = () => {
     dueDate: '',
     terms: ''
   });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch balance
+        const balanceResponse = await apiService.vouchers.getBalance();
+        if (balanceResponse.success) {
+          setUserBalance(balanceResponse.data?.balance || 0);
+        } else {
+          dispatch(showToast({
+            message: balanceResponse.message || 'Failed to fetch balance',
+            type: 'error'
+          }));
+        }
+
+        // Fetch themes
+        const themesResponse = await apiService.themes.getByVoucherType('work_order');
+        console.log('🎨 Work Order Themes response:', themesResponse);
+        if (themesResponse.success) {
+          console.log('✅ Work Order Themes data:', themesResponse.data);
+          setThemes(themesResponse.data || []);
+          // Set first theme as default if available
+          if (themesResponse.data && themesResponse.data.length > 0) {
+            setSelectedDesign(themesResponse.data[0].name);
+          }
+        } else {
+          console.error('Failed to fetch themes:', themesResponse.message);
+        }
+      } catch (error) {
+        console.error('Data fetch error:', error);
+        dispatch(showToast({
+          message: 'Failed to fetch data',
+          type: 'error'
+        }));
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [dispatch]);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -97,24 +146,68 @@ const WorkOrderVouchers = () => {
     return parseFloat(formData.totalAmount) || 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle form submission
-    console.log('Work Order Voucher Data:', formData);
+    
+    try {
+      // Validate milestones if payment type is milestone
+      if (formData.paymentType === 'milestone') {
+        const totalPercentage = formData.milestones.reduce((sum, milestone) => {
+          return sum + (parseFloat(milestone.percentage) || 0);
+        }, 0);
+        
+        if (Math.abs(totalPercentage - 100) > 0.01) {
+          dispatch(showToast({
+            message: 'Total milestone percentage must equal 100%',
+            type: 'error'
+          }));
+          return;
+        }
+      }
+
+      const voucherData = {
+        projectTitle: formData.projectTitle,
+        clientName: formData.clientName,
+        clientEmail: formData.clientEmail,
+        totalAmount: parseFloat(formData.totalAmount),
+        paymentType: formData.paymentType,
+        description: formData.description,
+        dueDate: formData.dueDate,
+        terms: formData.terms,
+        milestones: formData.paymentType === 'milestone' ? formData.milestones : undefined,
+        theme: selectedDesign
+      };
+
+      const response = await apiService.vouchers.createWorkOrder(voucherData);
+      
+      if (response.success) {
+        dispatch(showToast({
+          message: 'Work order voucher created successfully!',
+          type: 'success'
+        }));
+        // Refresh balance
+        const balanceResponse = await apiService.vouchers.getBalance();
+        if (balanceResponse.success) {
+          setUserBalance(balanceResponse.data?.balance || 0);
+        }
+        // Navigate to vouchers list or dashboard
+        navigate('/my-vouchers');
+      } else {
+        dispatch(showToast({
+          message: response.message || 'Failed to create voucher',
+          type: 'error'
+        }));
+      }
+    } catch (error) {
+      console.error('Voucher creation error:', error);
+      dispatch(showToast({
+        message: 'Failed to create voucher',
+        type: 'error'
+      }));
+    }
   };
 
-  const voucherDesigns = [
-    {
-      id: 1,
-      name: "Professional Design",
-      preview: "Clean, corporate layout with emphasis on project details"
-    },
-    {
-      id: 2,
-      name: "Modern Design", 
-      preview: "Contemporary layout with visual elements and icons"
-    }
-  ];
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-primary-50 pb-24">
@@ -164,7 +257,7 @@ const WorkOrderVouchers = () => {
               <div>
                 <h2 className="text-lg font-semibold text-neutral-900">Available Balance</h2>
                 <p className="text-2xl font-bold text-primary-600">
-                  {showBalance ? '$2,450.00' : '••••••'}
+                  {showBalance ? `₦${userBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '••••••'}
                 </p>
               </div>
               <button
@@ -390,7 +483,7 @@ const WorkOrderVouchers = () => {
                                 <div className="flex justify-between items-center text-sm">
                                   <span className="text-neutral-600">Calculated Amount:</span>
                                   <span className="font-semibold text-blue-600">
-                                    ${calculateMilestoneAmount(milestone.percentage).toFixed(2)}
+                                    ₦{calculateMilestoneAmount(milestone.percentage).toFixed(2)}
                                   </span>
                                 </div>
                               </div>
@@ -403,7 +496,7 @@ const WorkOrderVouchers = () => {
                           <div className="flex justify-between items-center">
                             <span className="font-medium text-neutral-900">Total Amount:</span>
                             <span className="text-lg font-bold text-primary-600">
-                              ${calculateTotal().toFixed(2)}
+                              ₦{calculateTotal().toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
@@ -475,22 +568,39 @@ const WorkOrderVouchers = () => {
               {/* Design Selection */}
               <div className="bg-white rounded-2xl shadow-soft p-6">
                 <h2 className="text-xl font-bold text-neutral-900 mb-4">Voucher Design</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  {voucherDesigns.map((design) => (
-                    <button
-                      key={design.id}
-                      onClick={() => setSelectedDesign(design.id)}
-                      className={`p-4 border-2 rounded-lg text-left transition-colors ${
-                        selectedDesign === design.id
-                          ? 'border-primary-600 bg-primary-50'
-                          : 'border-neutral-300 hover:border-neutral-400'
-                      }`}
-                    >
-                      <h3 className="font-medium text-neutral-900 mb-1">{design.name}</h3>
-                      <p className="text-sm text-neutral-600">{design.preview}</p>
-                    </button>
-                  ))}
-                </div>
+                {loading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+                    <p className="text-neutral-600 mt-2">Loading themes...</p>
+                  </div>
+                                 ) : themes && themes.length > 0 ? (
+                   <div className="grid grid-cols-2 gap-4">
+                     {themes.map((theme) => (
+                      <button
+                        key={theme.id}
+                        onClick={() => setSelectedDesign(theme.name)}
+                        className={`p-4 border-2 rounded-lg text-left transition-colors ${
+                          selectedDesign === theme.name
+                            ? 'border-primary-600 bg-primary-50'
+                            : 'border-neutral-300 hover:border-neutral-400'
+                        }`}
+                      >
+                        <div className={`w-12 h-12 bg-gradient-to-r ${theme.gradient_colors} rounded-lg flex items-center justify-center mb-3`}>
+                          <div className="text-white text-xl">
+                            {theme.icon_emoji}
+                          </div>
+                        </div>
+                                                 <h3 className="font-medium text-neutral-900 mb-1">{theme.display_name}</h3>
+                         <p className="text-sm text-neutral-600">{theme.description}</p>
+                       </button>
+                     ))}
+                   </div>
+                 ) : (
+                   <div className="text-center py-8">
+                     <p className="text-neutral-600">No themes available</p>
+                     <p className="text-sm text-neutral-500 mt-1">Please try refreshing the page</p>
+                   </div>
+                 )}
               </div>
 
               {/* Voucher Preview */}
@@ -507,130 +617,93 @@ const WorkOrderVouchers = () => {
                   </div>
                 </div>
 
-                {/* Voucher Design 1 - Professional */}
-                {selectedDesign === 1 && (
-                  <div className="border-2 border-neutral-200 rounded-lg p-6 bg-gradient-to-br from-blue-50 to-white">
-                    <div className="text-center mb-6">
-                      <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Handshake className="w-8 h-8 text-white" />
-                      </div>
-                      <h3 className="text-2xl font-bold text-neutral-900">Work Order Voucher</h3>
-                      <p className="text-neutral-600">CredoSafe Secure Transaction</p>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="border-b border-neutral-200 pb-4">
-                        <h4 className="font-semibold text-neutral-900 mb-2">Project Details</h4>
-                        <p className="text-neutral-700">{formData.projectTitle || 'Project Title'}</p>
-                        <p className="text-sm text-neutral-600">{formData.description || 'Project description'}</p>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm text-neutral-600">Client</p>
-                          <p className="font-medium text-neutral-900">{formData.clientName || 'Client Name'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-neutral-600">Amount</p>
-                          <p className="font-bold text-blue-600">${calculateTotal().toFixed(2)}</p>
+                {/* Dynamic Voucher Preview */}
+                {(() => {
+                  const selectedThemeData = themes && themes.length > 0 ? themes.find(t => t.name === selectedDesign) : null;
+                  
+                  if (!selectedThemeData) {
+                    return (
+                      <div className="border-2 border-neutral-200 rounded-lg p-6 bg-gradient-to-br from-blue-50 to-white">
+                        <div className="text-center py-8">
+                          <p className="text-neutral-600">No theme selected</p>
                         </div>
                       </div>
+                    );
+                  }
 
-                      {formData.paymentType === 'milestone' && formData.milestones.length > 0 && (
-                        <div>
-                          <h4 className="font-semibold text-neutral-900 mb-2">Milestones</h4>
-                          <div className="space-y-2">
-                            {formData.milestones.map((milestone, index) => (
-                              <div key={index} className="flex justify-between text-sm">
-                                <span>{milestone.name || `Milestone ${index + 1}`}</span>
-                                <span className="font-medium">${calculateMilestoneAmount(milestone.percentage).toFixed(2)}</span>
-                              </div>
-                            ))}
+                  return (
+                    <div className={`border-2 border-neutral-200 rounded-lg p-6 bg-gradient-to-br ${selectedThemeData.gradient_colors} text-white`}>
+                      <div className="text-center mb-6">
+                        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <div className="text-white text-2xl">
+                            {selectedThemeData.icon_emoji}
                           </div>
                         </div>
-                      )}
-
-                      <div className="border-t border-neutral-200 pt-4">
-                        <p className="text-xs text-neutral-500">Voucher ID: WO-{Date.now().toString().slice(-8)}</p>
-                        <p className="text-xs text-neutral-500">Created: {new Date().toLocaleDateString()}</p>
+                        <h3 className="text-2xl font-bold mb-2">Work Order Voucher</h3>
+                        <p className="text-white/80">CredoSafe Secure Transaction</p>
                       </div>
-                    </div>
-                  </div>
-                )}
 
-                {/* Voucher Design 2 - Modern */}
-                {selectedDesign === 2 && (
-                  <div className="border-2 border-neutral-200 rounded-lg p-6 bg-gradient-to-br from-indigo-50 to-purple-50">
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-                          <Handshake className="w-6 h-6 text-white" />
+                      <div className="space-y-4">
+                        {/* Project Details */}
+                        <div className="bg-white/20 rounded-lg p-4">
+                          <h4 className="font-semibold mb-2">Project Details</h4>
+                          <p className="font-medium">{formData.projectTitle || 'Project Title'}</p>
+                          <p className="text-sm text-white/80 mt-1">{formData.description || 'Project description'}</p>
                         </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-neutral-900">Work Order</h3>
-                          <p className="text-sm text-neutral-600">Secure Voucher</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-neutral-500">Voucher ID</p>
-                        <p className="font-mono text-sm font-bold text-neutral-900">WO-{Date.now().toString().slice(-8)}</p>
-                      </div>
-                    </div>
 
-                    <div className="space-y-4">
-                      <div className="bg-white rounded-lg p-4">
-                        <h4 className="font-semibold text-neutral-900 mb-2 flex items-center space-x-2">
-                          <FileText className="w-4 h-4" />
-                          <span>Project Information</span>
-                        </h4>
-                        <p className="text-neutral-700 font-medium">{formData.projectTitle || 'Project Title'}</p>
-                        <p className="text-sm text-neutral-600 mt-1">{formData.description || 'Project description'}</p>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white rounded-lg p-4">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <User className="w-4 h-4 text-neutral-500" />
-                            <span className="text-sm text-neutral-600">Client</span>
+                        {/* Client and Amount */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-white/20 rounded-lg p-4">
+                            <p className="text-white/80 mb-1">Client</p>
+                            <p className="font-medium">{formData.clientName || 'Client Name'}</p>
                           </div>
-                          <p className="font-medium text-neutral-900">{formData.clientName || 'Client Name'}</p>
-                        </div>
-                        <div className="bg-white rounded-lg p-4">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <DollarSign className="w-4 h-4 text-neutral-500" />
-                            <span className="text-sm text-neutral-600">Total</span>
+                          <div className="bg-white/20 rounded-lg p-4">
+                            <p className="text-white/80 mb-1">Total Amount</p>
+                            <p className="text-3xl font-bold">₦{calculateTotal().toFixed(2)}</p>
                           </div>
-                          <p className="font-bold text-indigo-600 text-lg">${calculateTotal().toFixed(2)}</p>
                         </div>
-                      </div>
 
-                      {formData.paymentType === 'milestone' && formData.milestones.length > 0 && (
-                        <div className="bg-white rounded-lg p-4">
-                          <h4 className="font-semibold text-neutral-900 mb-3 flex items-center space-x-2">
-                            <CheckCircle className="w-4 h-4" />
-                            <span>Payment Milestones</span>
-                          </h4>
-                          <div className="space-y-2">
-                            {formData.milestones.map((milestone, index) => (
-                              <div key={index} className="flex justify-between items-center">
-                                <div>
-                                  <p className="font-medium text-neutral-900">{milestone.name || `Milestone ${index + 1}`}</p>
-                                  <p className="text-xs text-neutral-500">{milestone.percentage || '0'}%</p>
+                        {/* Milestones */}
+                        {formData.paymentType === 'milestone' && formData.milestones.length > 0 && (
+                          <div className="bg-white/20 rounded-lg p-4">
+                            <h4 className="font-semibold mb-3">Payment Milestones</h4>
+                            <div className="space-y-2">
+                              {formData.milestones.map((milestone, index) => (
+                                <div key={index} className="flex justify-between items-center">
+                                  <div>
+                                    <p className="font-medium">{milestone.name || `Milestone ${index + 1}`}</p>
+                                    <p className="text-sm text-white/80">{milestone.percentage || '0'}%</p>
+                                  </div>
+                                  <span className="font-bold">₦{calculateMilestoneAmount(milestone.percentage).toFixed(2)}</span>
                                 </div>
-                                <span className="font-bold text-indigo-600">${calculateMilestoneAmount(milestone.percentage).toFixed(2)}</span>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      <div className="flex items-center justify-between text-xs text-neutral-500">
-                        <span>Created: {new Date().toLocaleDateString()}</span>
-                        <span>CredoSafe Platform</span>
+                        {/* Payment Type */}
+                        <div className="bg-white/20 rounded-lg p-4">
+                          <p className="text-white/80 mb-1">Payment Type</p>
+                          <p className="font-medium capitalize">{formData.paymentType || 'Full Payment'}</p>
+                        </div>
+
+                        {/* Due Date */}
+                        {formData.dueDate && (
+                          <div className="bg-white/20 rounded-lg p-4">
+                            <p className="text-white/80 mb-1">Due Date</p>
+                            <p className="font-medium">{new Date(formData.dueDate).toLocaleDateString()}</p>
+                          </div>
+                        )}
+
+                        {/* Footer */}
+                        <div className="border-t border-white/20 pt-4">
+                          <p className="text-xs text-white/60">Voucher ID: WO-{Date.now().toString().slice(-8)}</p>
+                          <p className="text-xs text-white/60">Created: {new Date().toLocaleDateString()}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             </div>
           </div>

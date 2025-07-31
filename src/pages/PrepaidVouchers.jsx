@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -18,10 +18,15 @@ import {
   Clock
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
+import apiService from '../api';
+import { useDispatch } from 'react-redux';
+import { showToast } from '../store/slices/toastSlice';
 
 const PrepaidVouchers = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [showBalance, setShowBalance] = useState(true);
+  const [userBalance, setUserBalance] = useState(0);
   const [formData, setFormData] = useState({
     voucherAmount: '',
     recipientName: '',
@@ -34,6 +39,29 @@ const PrepaidVouchers = () => {
     reloadAmount: '',
     reloadFrequency: 'monthly'
   });
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+      try {
+        const response = await apiService.vouchers.getBalance();
+        if (response.success) {
+          setUserBalance(response.data?.balance || 0);
+        } else {
+          dispatch(showToast({
+            message: response.message || 'Failed to fetch balance',
+            type: 'error'
+          }));
+        }
+      } catch (error) {
+        console.error('Balance fetch error:', error);
+        dispatch(showToast({
+          message: 'Failed to fetch balance',
+          type: 'error'
+        }));
+      }
+    };
+    fetchBalance();
+  }, [dispatch]);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -56,10 +84,50 @@ const PrepaidVouchers = () => {
     { value: 'entertainment', label: 'Entertainment', description: 'Movies, events, and activities' }
   ];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle form submission
-    console.log('Prepaid Voucher Data:', formData);
+    
+    try {
+      const voucherData = {
+        voucherAmount: parseFloat(formData.voucherAmount),
+        recipientName: formData.recipientName,
+        recipientEmail: formData.recipientEmail,
+        recipientPhone: formData.recipientPhone,
+        businessCategory: formData.businessCategory,
+        expiryDate: formData.expiryDate,
+        message: formData.message,
+        autoReload: formData.autoReload,
+        reloadAmount: formData.autoReload ? parseFloat(formData.reloadAmount) : undefined,
+        reloadFrequency: formData.autoReload ? formData.reloadFrequency : undefined
+      };
+
+      const response = await apiService.vouchers.createPrepaid(voucherData);
+      
+      if (response.success) {
+        dispatch(showToast({
+          message: 'Prepaid voucher created successfully!',
+          type: 'success'
+        }));
+        // Refresh balance
+        const balanceResponse = await apiService.vouchers.getBalance();
+        if (balanceResponse.success) {
+          setUserBalance(balanceResponse.data?.balance || 0);
+        }
+        // Navigate to vouchers list or dashboard
+        navigate('/my-vouchers');
+      } else {
+        dispatch(showToast({
+          message: response.message || 'Failed to create voucher',
+          type: 'error'
+        }));
+      }
+    } catch (error) {
+      console.error('Voucher creation error:', error);
+      dispatch(showToast({
+        message: 'Failed to create voucher',
+        type: 'error'
+      }));
+    }
   };
 
   return (
@@ -110,7 +178,7 @@ const PrepaidVouchers = () => {
               <div>
                 <h2 className="text-lg font-semibold text-neutral-900">Available Balance</h2>
                 <p className="text-2xl font-bold text-primary-600">
-                  {showBalance ? '$2,450.00' : '••••••'}
+                  {showBalance ? `₦${userBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '••••••'}
                 </p>
               </div>
               <button

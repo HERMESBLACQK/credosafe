@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import apiService from '../api';
 import { 
   Shield, 
   CreditCard, 
@@ -34,49 +35,111 @@ const Redeem = () => {
     if (!voucherCode.trim()) return;
 
     setIsProcessing(true);
-    // Simulate processing
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsProcessing(false);
-    
-    // Navigate to preview page with voucher data
-    navigate('/voucher-preview', { 
-      state: { 
-        voucherCode: voucherCode,
-        method: 'code'
-      } 
-    });
-  };
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setUploadedFile(file);
-      // Simulate processing the uploaded file
-      setIsProcessing(true);
-      setTimeout(() => {
-        setIsProcessing(false);
-        navigate('/voucher-preview', { 
+    try {
+      console.log('🔍 Searching for voucher with code:', voucherCode);
+      const response = await apiService.vouchers.searchByCode(voucherCode);
+      
+      console.log('📡 Server response for voucher search:', response);
+      console.log('📡 Response success:', response.success);
+      console.log('📡 Response message:', response.message);
+      console.log('📡 Response data:', response.data);
+      
+      if (response.success && response.data) {
+        console.log('✅ Voucher found:', response.data);
+        navigate('/redeem-voucher', { 
           state: { 
-            uploadedFile: file,
-            method: 'upload'
+            voucherData: response.data,
+            method: 'code',
+            voucherCode: voucherCode
           } 
         });
-      }, 2000);
+      } else {
+        console.error('❌ Voucher not found or error:', response.message);
+        alert('Voucher not found. Please check the code and try again.');
+      }
+    } catch (error) {
+      console.error('❌ Error searching for voucher:', error);
+      alert('Error searching for voucher. Please try again.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const handleQRScan = () => {
-    // Simulate QR scanning
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setUploadedFile(file);
+      setIsProcessing(true);
+      
+      try {
+        console.log('🔍 Processing uploaded file:', file.name);
+        const formData = new FormData();
+        formData.append('voucherFile', file);
+        
+        const response = await apiService.vouchers.uploadVoucher(formData);
+        
+        console.log('📡 Server response for file upload:', response);
+        console.log('📡 Response success:', response.success);
+        console.log('📡 Response message:', response.message);
+        console.log('📡 Response data:', response.data);
+        
+        if (response.success && response.data) {
+          console.log('✅ Voucher found from file:', response.data);
+          navigate('/redeem-voucher', { 
+            state: { 
+              voucherData: response.data,
+              method: 'upload',
+              uploadedFile: file
+            } 
+          });
+        } else {
+          console.error('❌ Voucher not found from file:', response.message);
+          alert('Voucher not found in uploaded file. Please check the file and try again.');
+        }
+      } catch (error) {
+        console.error('❌ Error processing uploaded file:', error);
+        alert('Error processing uploaded file. Please try again.');
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+  };
+
+  const handleQRScan = async () => {
     setIsProcessing(true);
-    setTimeout(() => {
+    
+    try {
+      // For now, we'll simulate QR scanning with a demo code
+      // In a real implementation, this would use a QR scanner library
+      const scannedCode = 'QR-SCANNED-CODE-123';
+      console.log('🔍 QR Code scanned:', scannedCode);
+      
+      const response = await apiService.vouchers.searchByCode(scannedCode);
+      
+      console.log('📡 Server response for QR scan:', response);
+      console.log('📡 Response success:', response.success);
+      console.log('📡 Response message:', response.message);
+      console.log('📡 Response data:', response.data);
+      
+      if (response.success && response.data) {
+        console.log('✅ Voucher found from QR scan:', response.data);
+        navigate('/redeem-voucher', { 
+          state: { 
+            voucherData: response.data,
+            method: 'qr',
+            voucherCode: scannedCode
+          } 
+        });
+      } else {
+        console.error('❌ Voucher not found from QR scan:', response.message);
+        alert('Voucher not found. Please check the QR code and try again.');
+      }
+    } catch (error) {
+      console.error('❌ Error processing QR scan:', error);
+      alert('Error processing QR scan. Please try again.');
+    } finally {
       setIsProcessing(false);
-      navigate('/voucher-preview', { 
-        state: { 
-          method: 'qr',
-          voucherCode: 'QR-SCANNED-CODE-123'
-        } 
-      });
-    }, 1500);
+    }
   };
 
   return (

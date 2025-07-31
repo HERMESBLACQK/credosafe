@@ -118,8 +118,13 @@ const ChangePassword = () => {
     try {
       setLoading(true);
       
-      // For demo purposes, accept any 6-digit OTP
-      if (otpValue.length === 6 && /^\d{6}$/.test(otpValue)) {
+      console.log('🔐 Verifying OTP:', otpValue);
+      
+      const response = await apiService.auth.verifyPasswordOTP(otpValue);
+      
+      console.log('📥 OTP verification response:', response);
+      
+      if (response.success) {
         setOtp(otpValue);
         setOtpVerified(true);
         setShowOTPModal(false);
@@ -129,7 +134,7 @@ const ChangePassword = () => {
         }));
       } else {
         dispatch(showToast({
-          message: 'Invalid OTP',
+          message: response.error || 'Invalid OTP',
           type: 'error'
         }));
       }
@@ -163,7 +168,6 @@ const ChangePassword = () => {
     
     try {
       const response = await apiService.auth.changePassword({
-        otp: otp,
         newPassword: formData.newPassword,
         confirmPassword: formData.confirmPassword
       });
@@ -171,11 +175,11 @@ const ChangePassword = () => {
       console.log('📥 Change password response:', response);
       
       if (response.success) {
-        setSuccess(true);
-        setFormData({
-          newPassword: '',
-          confirmPassword: ''
-        });
+      setSuccess(true);
+      setFormData({
+        newPassword: '',
+        confirmPassword: ''
+      });
         setOtp('');
         setOtpVerified(false);
         
@@ -183,12 +187,12 @@ const ChangePassword = () => {
           message: 'Password changed successfully',
           type: 'success'
         }));
-        
-        // Reset success message after 3 seconds
-        setTimeout(() => {
-          setSuccess(false);
-          navigate('/settings');
-        }, 3000);
+      
+      // Reset success message after 3 seconds
+      setTimeout(() => {
+        setSuccess(false);
+        navigate('/settings');
+      }, 3000);
       } else {
         dispatch(showToast({
           message: response.error || 'Failed to change password',
@@ -345,7 +349,7 @@ const ChangePassword = () => {
                     )}
                   </button>
                 </div>
-              )}
+                )}
 
               {/* New Password */}
               <div>
@@ -429,31 +433,31 @@ const ChangePassword = () => {
 
               {/* Password Requirements */}
               {otpVerified && (
-                <div className="bg-neutral-50 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-neutral-900 mb-2">Password Requirements:</h4>
-                                     <ul className="text-sm text-neutral-600 space-y-1">
-                     <li className="flex items-center space-x-2">
-                       <div className={`w-2 h-2 rounded-full ${formData.newPassword.length >= 8 ? 'bg-green-500' : 'bg-neutral-300'}`} />
-                       <span>At least 8 characters long</span>
-                     </li>
-                     <li className="flex items-center space-x-2">
-                       <div className={`w-2 h-2 rounded-full ${/[a-z]/.test(formData.newPassword) ? 'bg-green-500' : 'bg-neutral-300'}`} />
-                       <span>Contains lowercase letter</span>
-                     </li>
-                     <li className="flex items-center space-x-2">
-                       <div className={`w-2 h-2 rounded-full ${/[A-Z]/.test(formData.newPassword) ? 'bg-green-500' : 'bg-neutral-300'}`} />
-                       <span>Contains uppercase letter</span>
-                     </li>
-                     <li className="flex items-center space-x-2">
-                       <div className={`w-2 h-2 rounded-full ${/\d/.test(formData.newPassword) ? 'bg-green-500' : 'bg-neutral-300'}`} />
-                       <span>Contains number</span>
-                     </li>
+              <div className="bg-neutral-50 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-neutral-900 mb-2">Password Requirements:</h4>
+                <ul className="text-sm text-neutral-600 space-y-1">
+                  <li className="flex items-center space-x-2">
+                    <div className={`w-2 h-2 rounded-full ${formData.newPassword.length >= 8 ? 'bg-green-500' : 'bg-neutral-300'}`} />
+                    <span>At least 8 characters long</span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <div className={`w-2 h-2 rounded-full ${/[a-z]/.test(formData.newPassword) ? 'bg-green-500' : 'bg-neutral-300'}`} />
+                    <span>Contains lowercase letter</span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <div className={`w-2 h-2 rounded-full ${/[A-Z]/.test(formData.newPassword) ? 'bg-green-500' : 'bg-neutral-300'}`} />
+                    <span>Contains uppercase letter</span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <div className={`w-2 h-2 rounded-full ${/\d/.test(formData.newPassword) ? 'bg-green-500' : 'bg-neutral-300'}`} />
+                    <span>Contains number</span>
+                  </li>
                      <li className="flex items-center space-x-2">
                        <div className={`w-2 h-2 rounded-full ${/[@$!%*?&]/.test(formData.newPassword) ? 'bg-green-500' : 'bg-neutral-300'}`} />
                        <span>Contains special character (@$!%*?&)</span>
                      </li>
-                   </ul>
-                </div>
+                </ul>
+              </div>
               )}
 
               {/* Submit Button */}
@@ -485,6 +489,8 @@ const ChangePassword = () => {
           isOpen={showOTPModal}
           onClose={() => setShowOTPModal(false)}
           onVerify={handleOTPVerify}
+          onResend={handleSendOTP}
+          email={user?.email}
           loading={loading}
           title="Verify Password Change"
           message="Enter the 6-digit code sent to your email to verify your identity"

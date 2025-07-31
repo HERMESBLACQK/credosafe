@@ -59,6 +59,11 @@ const apiRequest = async (endpoint, options = {}) => {
 
     // Handle successful responses
     if (response.ok) {
+      // If the response has a success property, return it as is
+      if (data && typeof data === 'object' && 'success' in data) {
+        return data;
+      }
+      // Otherwise, wrap it in our standard format
       return { success: true, data };
     }
 
@@ -125,6 +130,11 @@ const authenticatedApiRequest = async (endpoint, options = {}) => {
 
     // Handle successful responses
     if (response.ok) {
+      // If the response has a success property, return it as is
+      if (data && typeof data === 'object' && 'success' in data) {
+        return data;
+      }
+      // Otherwise, wrap it in our standard format
       return { success: true, data };
     }
 
@@ -225,6 +235,14 @@ export const apiService = {
     sendPasswordOTP: async () => {
       return authenticatedApiRequest('/auth/send-password-otp', {
         method: 'POST'
+      });
+    },
+
+    // Verify OTP for password change (auth required)
+    verifyPasswordOTP: async (otp) => {
+      return authenticatedApiRequest('/auth/verify-password-otp', {
+        method: 'POST',
+        body: JSON.stringify({ otp })
       });
     },
 
@@ -358,6 +376,132 @@ export const apiService = {
     // Get user statistics (admin)
     getStats: async () => {
       return authenticatedApiRequest('/users/stats');
+    }
+  },
+
+  // Voucher endpoints (all require authentication)
+  vouchers: {
+    // Get user's vouchers
+    getMyVouchers: async () => {
+      return authenticatedApiRequest('/vouchers/my-vouchers');
+    },
+
+    // Get voucher by ID
+    getById: async (id) => {
+      return authenticatedApiRequest(`/vouchers/${id}`);
+    },
+
+    // Get user wallet balance
+    getBalance: async () => {
+      return authenticatedApiRequest('/vouchers/balance');
+    },
+
+    // Get voucher fee
+    getFee: async () => {
+      return apiRequest('/vouchers/fee');
+    },
+
+    // Verify voucher by code
+    verifyVoucher: async (voucherCode) => {
+      return apiRequest(`/vouchers/verify/${voucherCode}`);
+    },
+
+    // Create Work Order Voucher
+    createWorkOrder: async (voucherData) => {
+      return authenticatedApiRequest('/vouchers/work-order', {
+        method: 'POST',
+        body: JSON.stringify(voucherData)
+      });
+    },
+
+    // Create Purchase Escrow Voucher
+    createPurchaseEscrow: async (voucherData) => {
+      return authenticatedApiRequest('/vouchers/purchase-escrow', {
+        method: 'POST',
+        body: JSON.stringify(voucherData)
+      });
+    },
+
+    // Create Prepaid Voucher
+    createPrepaid: async (voucherData) => {
+      return authenticatedApiRequest('/vouchers/prepaid', {
+        method: 'POST',
+        body: JSON.stringify(voucherData)
+      });
+    },
+
+    // Create Gift Card Voucher
+    createGiftCard: async (voucherData) => {
+      return authenticatedApiRequest('/vouchers/gift-card', {
+        method: 'POST',
+        body: JSON.stringify(voucherData)
+      });
+    },
+
+    // Search voucher by code (for redemption)
+    searchByCode: async (voucherCode) => {
+      return apiRequest(`/vouchers/search/${voucherCode}`);
+    },
+
+    // Upload voucher file for redemption
+    uploadVoucher: async (formData) => {
+      return apiRequest('/vouchers/upload', {
+        method: 'POST',
+        headers: {
+          // Don't set Content-Type for FormData, let browser set it with boundary
+        },
+        body: formData
+      });
+    },
+
+    // Redeem voucher
+    redeemVoucher: async (redemptionData) => {
+      return authenticatedApiRequest('/vouchers/redeem', {
+        method: 'POST',
+        body: JSON.stringify(redemptionData)
+      });
+    },
+
+    // Release milestone funds for work order
+    releaseMilestone: async (voucherId) => {
+      return authenticatedApiRequest('/vouchers/release-milestone', {
+        method: 'POST',
+        body: JSON.stringify({ voucherId })
+      });
+    },
+
+    // Activate purchase voucher
+    activateVoucher: async (voucherId) => {
+      return authenticatedApiRequest('/vouchers/activate', {
+        method: 'POST',
+        body: JSON.stringify({ voucherId })
+      });
+    }
+  },
+
+  // Theme endpoints
+  themes: {
+    // Get themes by voucher type
+    getByVoucherType: async (voucherType) => {
+      return apiRequest(`/themes/${voucherType}`);
+    },
+
+    // Get theme by name
+    getByName: async (themeName) => {
+      return apiRequest(`/themes/theme/${themeName}`);
+    },
+
+    // Render voucher with theme
+    renderVoucher: async (themeName, voucherData) => {
+      return apiRequest('/themes/render', {
+        method: 'POST',
+        body: JSON.stringify({ themeName, voucherData })
+      });
+    },
+
+    // Get theme preview data
+    getPreviewData: async (voucherType) => {
+      return apiRequest(`/themes/preview/${voucherType}`);
     }
   }
 };

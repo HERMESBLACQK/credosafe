@@ -26,6 +26,8 @@ import GiftCardVouchers from './pages/GiftCardVouchers';
 import WalletTransactions from './pages/WalletTransactions';
 import Tier from './pages/Tier';
 import VoucherPreview from './pages/VoucherPreview';
+import RedeemVoucher from './pages/RedeemVoucher';
+import MyVouchers from './pages/MyVouchers';
 import Toast from './components/Toast';
 
 function App() {
@@ -54,9 +56,11 @@ function App() {
                                 <Route path="/change-password" element={<ChangePassword />} />
                       <Route path="/login-history" element={<LoginHistory />} />
                       <Route path="/device-management" element={<DeviceManagement />} />
-                      <Route path="/wallet-transactions" element={<WalletTransactions />} />
-                      <Route path="/tier" element={<Tier />} />
-                      <Route path="/voucher-preview" element={<VoucherPreview />} />
+                                <Route path="/wallet-transactions" element={<WalletTransactions />} />
+          <Route path="/tier" element={<Tier />} />
+          <Route path="/voucher-preview/:voucherId" element={<VoucherPreview />} />
+          <Route path="/redeem-voucher" element={<RedeemVoucher />} />
+          <Route path="/my-vouchers" element={<MyVouchers />} />
         </Routes>
         <Toast />
       </Router>

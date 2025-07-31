@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -19,10 +19,15 @@ import {
   Clock
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
+import apiService from '../api';
+import { useDispatch } from 'react-redux';
+import { showToast } from '../store/slices/toastSlice';
 
 const PurchaseEscrowVouchers = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [showBalance, setShowBalance] = useState(true);
+  const [userBalance, setUserBalance] = useState(0);
   const [formData, setFormData] = useState({
     itemTitle: '',
     sellerName: '',
@@ -31,12 +36,34 @@ const PurchaseEscrowVouchers = () => {
     buyerEmail: '',
     itemDescription: '',
     itemValue: '',
-    escrowFee: '2.5', // Default 2.5%
     terms: '',
     inspectionPeriod: '7', // Default 7 days
     shippingMethod: 'standard',
     returnPolicy: '14' // Default 14 days
   });
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+      try {
+        const response = await apiService.vouchers.getBalance();
+        if (response.success) {
+          setUserBalance(response.data?.balance || 0);
+        } else {
+          dispatch(showToast({
+            message: response.message || 'Failed to fetch balance',
+            type: 'error'
+          }));
+        }
+      } catch (error) {
+        console.error('Balance fetch error:', error);
+        dispatch(showToast({
+          message: 'Failed to fetch balance',
+          type: 'error'
+        }));
+      }
+    };
+    fetchBalance();
+  }, [dispatch]);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -51,22 +78,56 @@ const PurchaseEscrowVouchers = () => {
     }));
   };
 
-  const calculateEscrowFee = () => {
-    const value = parseFloat(formData.itemValue) || 0;
-    const feePercentage = parseFloat(formData.escrowFee) || 0;
-    return (value * feePercentage) / 100;
-  };
-
   const calculateTotal = () => {
     const value = parseFloat(formData.itemValue) || 0;
-    const fee = calculateEscrowFee();
-    return value + fee;
+    return value;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle form submission
-    console.log('Purchase Escrow Voucher Data:', formData);
+    
+    try {
+      const voucherData = {
+        itemTitle: formData.itemTitle,
+        sellerName: formData.sellerName,
+        sellerEmail: formData.sellerEmail,
+        buyerName: formData.buyerName,
+        buyerEmail: formData.buyerEmail,
+        itemDescription: formData.itemDescription,
+        itemValue: parseFloat(formData.itemValue),
+        terms: formData.terms,
+        inspectionPeriod: parseInt(formData.inspectionPeriod),
+        shippingMethod: formData.shippingMethod,
+        returnPolicy: parseInt(formData.returnPolicy)
+      };
+
+      const response = await apiService.vouchers.createPurchaseEscrow(voucherData);
+      
+      if (response.success) {
+        dispatch(showToast({
+          message: 'Purchase escrow voucher created successfully!',
+          type: 'success'
+        }));
+        // Refresh balance
+        const balanceResponse = await apiService.vouchers.getBalance();
+        if (balanceResponse.success) {
+          setUserBalance(balanceResponse.data?.balance || 0);
+        }
+        // Navigate to vouchers list or dashboard
+        navigate('/my-vouchers');
+      } else {
+        dispatch(showToast({
+          message: response.message || 'Failed to create voucher',
+          type: 'error'
+        }));
+      }
+    } catch (error) {
+      console.error('Voucher creation error:', error);
+      dispatch(showToast({
+        message: 'Failed to create voucher',
+        type: 'error'
+      }));
+    }
   };
 
   return (
@@ -117,7 +178,7 @@ const PurchaseEscrowVouchers = () => {
               <div>
                 <h2 className="text-lg font-semibold text-neutral-900">Available Balance</h2>
                 <p className="text-2xl font-bold text-primary-600">
-                  {showBalance ? '$2,450.00' : '••••••'}
+                  {showBalance ? `₦${userBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '••••••'}
                 </p>
               </div>
               <button
@@ -260,22 +321,7 @@ const PurchaseEscrowVouchers = () => {
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-neutral-900">Escrow Settings</h3>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-neutral-700 mb-2">
-                          Escrow Fee (%)
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.escrowFee}
-                          onChange={(e) => handleInputChange('escrowFee', e.target.value)}
-                          className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                          placeholder="2.5"
-                          min="0"
-                          max="10"
-                          step="0.1"
-                        />
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-neutral-700 mb-2">
                           Inspection Period (days)
@@ -364,13 +410,13 @@ const PurchaseEscrowVouchers = () => {
                     <span className="font-medium">${parseFloat(formData.itemValue) || 0}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-neutral-600">Escrow Fee ({formData.escrowFee}%):</span>
-                    <span className="font-medium">${calculateEscrowFee().toFixed(2)}</span>
+                    <span className="text-neutral-600">Fixed Fee:</span>
+                    <span className="font-medium">₦500.00</span>
                   </div>
                   <div className="border-t border-neutral-200 pt-3">
                     <div className="flex justify-between items-center">
                       <span className="font-semibold text-neutral-900">Total Amount:</span>
-                      <span className="text-lg font-bold text-green-600">${calculateTotal().toFixed(2)}</span>
+                      <span className="text-lg font-bold text-green-600">₦{(parseFloat(formData.itemValue) || 0) + 500}</span>
                     </div>
                   </div>
                 </div>
@@ -464,16 +510,16 @@ const PurchaseEscrowVouchers = () => {
                     <div className="bg-white rounded-lg p-4">
                       <div className="flex justify-between items-center mb-2">
                         <span className="font-medium text-neutral-900">Item Value:</span>
-                        <span className="font-bold text-green-600">${parseFloat(formData.itemValue) || 0}</span>
+                        <span className="font-bold text-green-600">₦{parseFloat(formData.itemValue) || 0}</span>
                       </div>
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-neutral-600">Escrow Fee ({formData.escrowFee}%):</span>
-                        <span className="text-sm font-medium">${calculateEscrowFee().toFixed(2)}</span>
+                        <span className="text-sm text-neutral-600">Fixed Fee:</span>
+                        <span className="text-sm font-medium">₦500.00</span>
                       </div>
                       <div className="border-t border-neutral-200 pt-2">
                         <div className="flex justify-between items-center">
                           <span className="font-semibold text-neutral-900">Total:</span>
-                          <span className="text-lg font-bold text-green-600">${calculateTotal().toFixed(2)}</span>
+                          <span className="text-lg font-bold text-green-600">₦{(parseFloat(formData.itemValue) || 0) + 500}</span>
                         </div>
                       </div>
                     </div>
