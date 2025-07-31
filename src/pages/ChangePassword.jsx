@@ -455,7 +455,7 @@ const ChangePassword = () => {
                      <li className="flex items-center space-x-2">
                        <div className={`w-2 h-2 rounded-full ${/[@$!%*?&]/.test(formData.newPassword) ? 'bg-green-500' : 'bg-neutral-300'}`} />
                        <span>Contains special character (@$!%*?&)</span>
-                     </li>
+                  </li>
                 </ul>
               </div>
               )}

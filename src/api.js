@@ -476,6 +476,22 @@ export const apiService = {
         method: 'POST',
         body: JSON.stringify({ voucherId })
       });
+    },
+
+    // Cancel voucher (initiate dispute)
+    cancelVoucher: async (voucherId, reason) => {
+      return authenticatedApiRequest('/vouchers/cancel', {
+        method: 'POST',
+        body: JSON.stringify({ voucherId, reason })
+      });
+    },
+
+    // Confirm cancellation (by recipient)
+    confirmCancel: async (voucherId) => {
+      return authenticatedApiRequest('/vouchers/confirm-cancel', {
+        method: 'POST',
+        body: JSON.stringify({ voucherId })
+      });
     }
   },
 

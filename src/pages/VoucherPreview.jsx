@@ -13,7 +13,9 @@ import {
   Gift,
   CreditCard,
   Eye,
-  EyeOff
+  EyeOff,
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
 
@@ -26,6 +28,9 @@ const VoucherPreview = () => {
   const [loadingThemes, setLoadingThemes] = useState(false);
   const [isReleasingMilestone, setIsReleasingMilestone] = useState(false);
   const [isActivatingVoucher, setIsActivatingVoucher] = useState(false);
+  const [isCancellingVoucher, setIsCancellingVoucher] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
 
   useEffect(() => {
     console.log('🔍 VoucherPreview useEffect triggered');
@@ -345,6 +350,83 @@ const VoucherPreview = () => {
     }
   };
 
+  const handleCancelVoucher = async () => {
+    if (!selectedVoucher?.voucherData?.id) return;
+    
+    setIsCancellingVoucher(true);
+    try {
+      console.log('🔍 Cancelling voucher:', selectedVoucher.voucherData.id);
+      const response = await apiService.vouchers.cancelVoucher(selectedVoucher.voucherData.id, cancelReason);
+      
+      console.log('📡 Cancel voucher response:', response);
+      
+      if (response.success) {
+        console.log('✅ Voucher cancellation initiated successfully');
+        alert('Voucher cancellation initiated successfully! Recipient has been notified.');
+        setShowCancelModal(false);
+        setCancelReason('');
+        
+        // Refresh the voucher data
+        if (selectedVoucher.voucherData.id) {
+          const voucherResponse = await apiService.vouchers.getById(selectedVoucher.voucherData.id);
+          if (voucherResponse.success) {
+            setSelectedVoucher(prev => ({
+              ...prev,
+              voucherData: voucherResponse.data
+            }));
+          }
+        }
+      } else {
+        console.error('❌ Failed to cancel voucher:', response.message);
+        alert(`Failed to cancel voucher: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error cancelling voucher:', error);
+      alert('Error cancelling voucher. Please try again.');
+    } finally {
+      setIsCancellingVoucher(false);
+    }
+  };
+
+  const handleResolveDispute = async () => {
+    if (!selectedVoucher?.voucherData?.id) return;
+    
+    try {
+      console.log('🔍 Resolving dispute for voucher:', selectedVoucher.voucherData.id);
+      
+      let response;
+      if (selectedVoucher.voucherType === 'work_order') {
+        response = await apiService.vouchers.releaseMilestone(selectedVoucher.voucherData.id);
+      } else if (selectedVoucher.voucherType === 'purchase_escrow') {
+        response = await apiService.vouchers.activateVoucher(selectedVoucher.voucherData.id);
+      }
+      
+      console.log('📡 Resolve dispute response:', response);
+      
+      if (response.success) {
+        console.log('✅ Dispute resolved successfully');
+        alert('Dispute resolved successfully! Voucher is now available for redemption.');
+        
+        // Refresh the voucher data
+        if (selectedVoucher.voucherData.id) {
+          const voucherResponse = await apiService.vouchers.getById(selectedVoucher.voucherData.id);
+          if (voucherResponse.success) {
+            setSelectedVoucher(prev => ({
+              ...prev,
+              voucherData: voucherResponse.data
+            }));
+          }
+        }
+      } else {
+        console.error('❌ Failed to resolve dispute:', response.message);
+        alert(`Failed to resolve dispute: ${response.message}`);
+      }
+    } catch (error) {
+      console.error('❌ Error resolving dispute:', error);
+      alert('Error resolving dispute. Please try again.');
+    }
+  };
+
   if (!selectedVoucher) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-primary-50 flex items-center justify-center">
@@ -365,9 +447,9 @@ const VoucherPreview = () => {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => navigate('/transactions')}
-                className="flex items-center space-x-2 text-neutral-600 hover:text-primary-600 transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
+              className="flex items-center space-x-2 text-neutral-600 hover:text-primary-600 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
                 <span>Back to Transactions</span>
               </button>
             </div>
@@ -410,6 +492,42 @@ const VoucherPreview = () => {
             </div>
           )}
           
+          {/* Voucher Status Alert */}
+          {selectedVoucher.voucherData.status === 'pending' && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6 mb-6">
+              <div className="flex items-start space-x-3">
+                <AlertTriangle className="w-6 h-6 text-yellow-600 mt-1 flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-yellow-900 mb-2">Voucher in Dispute Mode</h3>
+                  <p className="text-yellow-800 text-sm">
+                    This voucher is currently in dispute mode. Please contact admin support if the dispute has not been resolved yet.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Dispute Status Alert */}
+          {selectedVoucher.voucherData.dispute_status === '1' && (
+            <div className="bg-orange-50 border border-orange-200 rounded-2xl p-6 mb-6">
+              <div className="flex items-start space-x-3">
+                <AlertTriangle className="w-6 h-6 text-orange-600 mt-1 flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-orange-900 mb-2">Cancellation Requested</h3>
+                  <p className="text-orange-800 text-sm mb-4">
+                    You have requested to cancel this voucher. The recipient has been notified and can confirm the cancellation.
+                  </p>
+                  {selectedVoucher.voucherData.dispute_reason && (
+                    <div className="bg-orange-100 rounded-lg p-3">
+                      <p className="text-sm font-medium text-orange-900 mb-1">Your reason for cancellation:</p>
+                      <p className="text-sm text-orange-800 italic">"{selectedVoucher.voucherData.dispute_reason}"</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Voucher Details */}
           <div className="space-y-6">
             {/* Voucher Preview Card */}
@@ -448,14 +566,14 @@ const VoucherPreview = () => {
                       {selectedVoucher.voucherData.barcode || 'N/A'}
                     </p>
                   </div>
-                </div>
+                  </div>
 
                 {/* Status */}
                 <div className="text-center">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${getStatusColor(selectedVoucher.voucherData.status)}`}>
                     {selectedVoucher.voucherData.status || 'N/A'}
                   </span>
-                </div>
+                  </div>
 
                 {/* Footer */}
                 <div className="border-t border-white/20 pt-4">
@@ -468,8 +586,8 @@ const VoucherPreview = () => {
                     Created: {formatDate(selectedVoucher.voucherData.created_at)}
                   </p>
                 </div>
+                </div>
               </div>
-            </div>
 
             {/* Voucher Type Specific Details */}
             {(() => {
@@ -480,7 +598,7 @@ const VoucherPreview = () => {
             })() && (
               <div className="bg-white border border-neutral-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-neutral-900 mb-4">Work Order Details</h3>
-                <div className="space-y-4">
+              <div className="space-y-4">
                   {/* Project Details */}
                   <div className="bg-neutral-50 rounded-lg p-4">
                     <h4 className="font-semibold mb-2">Project Details</h4>
@@ -505,11 +623,11 @@ const VoucherPreview = () => {
                     <div className="bg-neutral-50 rounded-lg p-4">
                       <p className="text-neutral-600 mb-1">Total Amount</p>
                       <p className="text-lg font-semibold text-neutral-700">{formatCurrency(selectedVoucher.voucherData.total_amount || 0)}</p>
-                    </div>
+                  </div>
                     <div className="bg-neutral-50 rounded-lg p-4">
                       <p className="text-neutral-600 mb-1">Payment Type</p>
                       <p className="font-medium text-neutral-900 capitalize">{selectedVoucher.voucherData.payment_type || 'Full Payment'}</p>
-                    </div>
+                  </div>
                   </div>
 
                   {/* Due Date */}
@@ -517,16 +635,16 @@ const VoucherPreview = () => {
                     <div className="bg-neutral-50 rounded-lg p-4">
                       <p className="text-neutral-600 mb-1">Due Date</p>
                       <p className="font-medium text-neutral-900">{formatDate(selectedVoucher.voucherData.due_date)}</p>
-                    </div>
+                </div>
                   )}
 
                   {/* Terms */}
                   {selectedVoucher.voucherData.terms && (
-                    <div className="bg-neutral-50 rounded-lg p-4">
+                  <div className="bg-neutral-50 rounded-lg p-4">
                       <p className="text-neutral-600 mb-1">Terms & Conditions</p>
                       <p className="text-neutral-900">{selectedVoucher.voucherData.terms}</p>
-                    </div>
-                  )}
+                  </div>
+                )}
 
                   {/* Milestones Section */}
                   {(() => {
@@ -560,13 +678,13 @@ const VoucherPreview = () => {
                             }`}>
                               {milestone.status || 'pending'}
                             </span>
-                                </div>
-                              </div>
+              </div>
+            </div>
                             </div>
                           );
                         })}
-                      </div>
-                      
+          </div>
+
                       {/* Milestones Summary */}
                       <div className="mt-4 bg-blue-100 rounded-lg p-4">
                         <div className="flex justify-between items-center text-sm">
@@ -579,8 +697,8 @@ const VoucherPreview = () => {
                             {selectedVoucher.voucherData.milestones.reduce((sum, m) => sum + (parseFloat(m.percentage) || 0), 0)}%
                           </span>
                         </div>
-                      </div>
-                    </div>
+                  </div>
+                  </div>
                   )}
                 </div>
               </div>
@@ -602,27 +720,27 @@ const VoucherPreview = () => {
                     <div>
                       <p className="text-sm text-neutral-600 mb-1">Seller Name</p>
                       <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.seller_name || 'N/A'}</p>
-                    </div>
+                </div>
                     <div>
                       <p className="text-sm text-neutral-600 mb-1">Seller Email</p>
                       <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.seller_email || 'N/A'}</p>
-                    </div>
+            </div>
                     <div>
                       <p className="text-sm text-neutral-600 mb-1">Buyer Name</p>
                       <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.buyer_name || 'N/A'}</p>
-                    </div>
-                    <div>
+          </div>
+              <div>
                       <p className="text-sm text-neutral-600 mb-1">Buyer Email</p>
                       <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.buyer_email || 'N/A'}</p>
-                    </div>
+              </div>
                     <div>
                       <p className="text-sm text-neutral-600 mb-1">Item Value</p>
                       <p className="font-medium text-neutral-900">{formatCurrency(selectedVoucher.voucherData.item_value || 0)}</p>
-                    </div>
+            </div>
                     <div>
                       <p className="text-sm text-neutral-600 mb-1">Shipping Method</p>
                       <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.shipping_method || 'N/A'}</p>
-                    </div>
+            </div>
                   </div>
                 </div>
               </div>
@@ -649,11 +767,11 @@ const VoucherPreview = () => {
                       <p className="text-sm text-neutral-600 mb-1">Sender Email</p>
                       <p className="font-medium text-neutral-900">{selectedVoucher.voucherData.sender_email || 'N/A'}</p>
                     </div>
-                    <div>
+                  <div>
                       <p className="text-sm text-neutral-600 mb-1">Theme</p>
                       <p className="font-medium text-neutral-900 capitalize">{selectedVoucher.voucherData.theme || 'N/A'}</p>
-                    </div>
-                    <div>
+                  </div>
+                  <div>
                       <p className="text-sm text-neutral-600 mb-1">Delivery Method</p>
                       <p className="font-medium text-neutral-900 capitalize">{selectedVoucher.voucherData.delivery_method || 'N/A'}</p>
                     </div>
@@ -665,8 +783,8 @@ const VoucherPreview = () => {
                     </div>
                   )}
                 </div>
-              </div>
-            )}
+                    </div>
+                  )}
 
             {selectedVoucher.voucherType === 'prepaid' && (
               <div className="bg-white border border-neutral-200 rounded-lg p-6">
@@ -695,13 +813,13 @@ const VoucherPreview = () => {
                         {selectedVoucher.voucherData.expiry_date ? formatDate(selectedVoucher.voucherData.expiry_date) : 'No expiry'}
                       </p>
                     </div>
-                    <div>
+                        <div>
                       <p className="text-sm text-neutral-600 mb-1">Auto Reload</p>
                       <p className="font-medium text-neutral-900">
                         {selectedVoucher.voucherData.auto_reload ? 'Enabled' : 'Disabled'}
                       </p>
-                    </div>
-                  </div>
+                        </div>
+                      </div>
                   {selectedVoucher.voucherData.message && (
                     <div>
                       <p className="text-sm text-neutral-600 mb-1">Message</p>
@@ -724,54 +842,130 @@ const VoucherPreview = () => {
               return true;
             })()}
             
-            {selectedVoucher.voucherType === 'work_order' && selectedVoucher.voucherData.status === 'active' && (
+            {/* Work Order Actions */}
+            {selectedVoucher.voucherType === 'work_order' && (selectedVoucher.voucherData.status === 'active' || selectedVoucher.voucherData.status === 'pending' || selectedVoucher.voucherData.status === 'available') && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-900 mb-3">Work Order Actions</h3>
-                <button
-                  onClick={handleReleaseMilestone}
-                  disabled={isReleasingMilestone}
-                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                >
-                  {isReleasingMilestone ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Releasing...</span>
-                    </>
-                  ) : (
-                    <>
+                <h3 className="font-semibold text-blue-900 mb-3">
+                  {selectedVoucher.voucherData.status === 'pending' ? 'Dispute Resolution' : 
+                   selectedVoucher.voucherData.status === 'available' ? 'Voucher Actions' : 'Work Order Actions'}
+                </h3>
+                
+                {selectedVoucher.voucherData.status === 'active' ? (
+                  <>
+                    <button
+                      onClick={handleReleaseMilestone}
+                      disabled={isReleasingMilestone}
+                      className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 mb-3"
+                    >
+                      {isReleasingMilestone ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Releasing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>🎯</span>
+                          <span>Release Milestone Funds</span>
+                        </>
+                      )}
+                    </button>
+                    <p className="text-sm text-blue-700 mb-3">
+                      Release the next pending milestone to make funds available for withdrawal
+                    </p>
+                  </>
+                ) : selectedVoucher.voucherData.status === 'pending' ? (
+                  <>
+                    <button
+                      onClick={handleResolveDispute}
+                      className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center space-x-2 mb-3"
+                    >
                       <span>🎯</span>
-                      <span>Release Milestone Funds</span>
-                    </>
-                  )}
+                      <span>Release Milestone & Resolve Dispute</span>
+                    </button>
+                    <p className="text-sm text-blue-700 mb-3">
+                      Release milestone funds and resolve the dispute. Voucher will be available for redemption.
+                    </p>
+                  </>
+                ) : (
+                  // Available status - only show cancel button
+                  <p className="text-sm text-blue-700 mb-3">
+                    This voucher has available milestones for redemption. You can cancel it if needed.
+                  </p>
+                )}
+                
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  className="w-full bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 transition-colors font-semibold flex items-center justify-center space-x-2"
+                >
+                  <span>❌</span>
+                  <span>Cancel Voucher</span>
                 </button>
-                <p className="text-sm text-blue-700 mt-2">
-                  Release the next pending milestone to make funds available for withdrawal
+                <p className="text-sm text-red-700 mt-2">
+                  Initiate cancellation process. Recipient will be notified.
                 </p>
               </div>
             )}
 
-            {(selectedVoucher.voucherType === 'purchase_escrow' || selectedVoucher.voucherType === 'purchase-escrow' || selectedVoucher.voucherType === 'escrow') && selectedVoucher.voucherData.status === 'active' && (
+            {/* Purchase Escrow Actions */}
+            {(selectedVoucher.voucherType === 'purchase_escrow' || selectedVoucher.voucherType === 'purchase-escrow' || selectedVoucher.voucherType === 'escrow') && (selectedVoucher.voucherData.status === 'active' || selectedVoucher.voucherData.status === 'pending' || selectedVoucher.voucherData.status === 'available') && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h3 className="font-semibold text-green-900 mb-3">Purchase Actions</h3>
-                <button
-                  onClick={handleActivateVoucher}
-                  disabled={isActivatingVoucher}
-                  className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                >
-                  {isActivatingVoucher ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Making Available...</span>
-                    </>
-                  ) : (
-                    <>
+                <h3 className="font-semibold text-green-900 mb-3">
+                  {selectedVoucher.voucherData.status === 'pending' ? 'Dispute Resolution' : 
+                   selectedVoucher.voucherData.status === 'available' ? 'Voucher Actions' : 'Purchase Actions'}
+                </h3>
+                
+                {selectedVoucher.voucherData.status === 'active' ? (
+                  <>
+                    <button
+                      onClick={handleActivateVoucher}
+                      disabled={isActivatingVoucher}
+                      className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 mb-3"
+                    >
+                      {isActivatingVoucher ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Making Available...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>✅</span>
+                          <span>Make Available for Redemption</span>
+                        </>
+                      )}
+                    </button>
+                    <p className="text-sm text-green-700 mb-3">
+                      Change voucher status to 'available' so it can be redeemed for withdrawal
+                    </p>
+                  </>
+                ) : selectedVoucher.voucherData.status === 'pending' ? (
+                  <>
+                    <button
+                      onClick={handleResolveDispute}
+                      className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center justify-center space-x-2 mb-3"
+                    >
                       <span>✅</span>
-                      <span>Make Available for Redemption</span>
-                    </>
-                  )}
+                      <span>Activate & Resolve Dispute</span>
+                    </button>
+                    <p className="text-sm text-green-700 mb-3">
+                      Activate voucher and resolve the dispute. Voucher will be available for redemption.
+                    </p>
+                  </>
+                ) : (
+                  // Available status - only show cancel button
+                  <p className="text-sm text-green-700 mb-3">
+                    This voucher is available for redemption. You can cancel it if needed.
+                  </p>
+                )}
+                
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  className="w-full bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 transition-colors font-semibold flex items-center justify-center space-x-2"
+                >
+                  <span>❌</span>
+                  <span>Cancel Voucher</span>
                 </button>
-                <p className="text-sm text-green-700 mt-2">
-                  Change voucher status to 'available' so it can be redeemed for withdrawal
+                <p className="text-sm text-red-700 mt-2">
+                  Initiate cancellation process. Recipient will be notified.
                 </p>
               </div>
             )}
@@ -802,10 +996,78 @@ const VoucherPreview = () => {
         </div>
       </div>
       
+      {/* Cancel Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-large max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-neutral-900">Cancel Voucher</h2>
+              <button
+                onClick={() => setShowCancelModal(false)}
+                className="p-2 text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  Reason for Cancellation (Optional)
+                </label>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Enter reason for cancellation..."
+                  rows="3"
+                />
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 mt-1 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-900">Important Notice</p>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      Cancelling this voucher will notify the recipient. The voucher will be put on hold until the recipient confirms the cancellation.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowCancelModal(false)}
+                  className="flex-1 px-4 py-3 border border-neutral-300 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCancelVoucher}
+                  disabled={isCancellingVoucher}
+                  className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  {isCancellingVoucher ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Cancelling...</span>
+                    </div>
+                  ) : (
+                    'Confirm Cancellation'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Floating Footer Navigation */}
       <FloatingFooter />
     </div>
   );
 };
 
-export default VoucherPreview;
+export default VoucherPreview; 

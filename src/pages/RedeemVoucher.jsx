@@ -33,6 +33,9 @@ const RedeemVoucher = () => {
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [redeemAmount, setRedeemAmount] = useState('');
+  const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
 
   // Voucher data from navigation state
   const [voucherData, setVoucherData] = useState(null);
@@ -109,6 +112,9 @@ const RedeemVoucher = () => {
   const canRedeemVoucher = () => {
     if (!voucherData) return false;
     
+    // Check if voucher is in dispute - cannot be redeemed
+    if (voucherData.dispute_status === '1') return false;
+    
     // Check if voucher is completed
     if (voucherData.status === 'completed') return false;
     
@@ -156,6 +162,17 @@ const RedeemVoucher = () => {
     return parseFloat(voucherData.available_amount || voucherData.total_amount) || 0;
   };
 
+  // Get available milestone amount for work order vouchers
+  const getAvailableMilestoneAmount = () => {
+    if (!voucherData || voucherData.type !== 'work_order') return 0;
+    
+    const availableMilestone = voucherData.milestones && 
+      Array.isArray(voucherData.milestones) && 
+      voucherData.milestones.find(milestone => milestone.status === 'available');
+    
+    return availableMilestone ? parseFloat(availableMilestone.amount) || 0 : 0;
+  };
+
   const verifyAccount = async () => {
     if (withdrawForm.accountNumber && withdrawForm.bankName) {
       setIsVerifying(true);
@@ -180,8 +197,13 @@ const RedeemVoucher = () => {
   const handleRedeem = async (e) => {
     e.preventDefault();
     
+    // Clear any previous error messages
+    setErrorMessage('');
+    setShowErrorAlert(false);
+    
     if (!canRedeemVoucher()) {
-      alert('Voucher cannot be redeemed at this time.');
+      setErrorMessage('Voucher cannot be redeemed at this time.');
+      setShowErrorAlert(true);
       return;
     }
     
@@ -193,11 +215,26 @@ const RedeemVoucher = () => {
     if (voucherData.type === 'prepaid') {
       const amount = parseFloat(redeemAmount);
       if (!amount || amount <= 0) {
-        alert('Please enter a valid amount for redemption.');
+        setErrorMessage('Please enter a valid amount for redemption.');
+        setShowErrorAlert(true);
         return;
       }
       if (amount > getAvailableAmount()) {
-        alert('Redemption amount cannot exceed the available amount.');
+        setErrorMessage('Redemption amount cannot exceed the available amount.');
+        setShowErrorAlert(true);
+        return;
+      }
+    }
+
+    // Check for work order vouchers without available milestones
+    if (voucherData.type === 'work_order') {
+      const hasAvailableMilestones = voucherData.milestones && 
+        Array.isArray(voucherData.milestones) && 
+        voucherData.milestones.some(milestone => milestone.status === 'available');
+      
+      if (!hasAvailableMilestones) {
+        setErrorMessage('No milestones are available for redemption. Please contact the voucher owner to release milestone funds.');
+        setShowErrorAlert(true);
         return;
       }
     }
@@ -210,7 +247,8 @@ const RedeemVoucher = () => {
       
       const redemptionData = {
         voucherCode: voucherData.voucher_code,
-        ...(voucherData.type === 'prepaid' && { amount: parseFloat(redeemAmount) })
+        ...(voucherData.type === 'prepaid' && { amount: parseFloat(redeemAmount) }),
+        ...(voucherData.type === 'work_order' && { amount: getAvailableMilestoneAmount() })
       };
 
       console.log('📡 Sending redemption request:', redemptionData);
@@ -236,11 +274,13 @@ const RedeemVoucher = () => {
         }
       } else {
         console.error('❌ Redemption failed:', response.message);
-        alert(`Redemption failed: ${response.message}`);
+        setErrorMessage(`Redemption failed: ${response.message}`);
+        setShowErrorAlert(true);
       }
     } catch (error) {
       console.error('❌ Error during redemption:', error);
-      alert('Error during redemption. Please try again.');
+      setErrorMessage('Error during redemption. Please try again.');
+      setShowErrorAlert(true);
     } finally {
       setIsRedeeming(false);
     }
@@ -248,6 +288,37 @@ const RedeemVoucher = () => {
 
   const handleGoHome = () => {
     navigate('/dashboard');
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!voucherData?.id) return;
+    
+    setIsConfirmingCancel(true);
+    try {
+      console.log('🔍 Confirming cancellation for voucher:', voucherData.id);
+      const response = await apiService.vouchers.confirmCancel(voucherData.id);
+      
+      console.log('📡 Confirm cancel response:', response);
+      
+      if (response.success) {
+        console.log('✅ Voucher cancellation confirmed successfully');
+        setErrorMessage(`Voucher cancellation confirmed! Owner has been refunded ₦${formatCurrency(response.refund_amount)}`);
+        setShowErrorAlert(true);
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 3000);
+      } else {
+        console.error('❌ Failed to confirm cancellation:', response.message);
+        setErrorMessage(`Failed to confirm cancellation: ${response.message}`);
+        setShowErrorAlert(true);
+      }
+    } catch (error) {
+      console.error('❌ Error confirming cancellation:', error);
+      setErrorMessage('Error confirming cancellation. Please try again.');
+      setShowErrorAlert(true);
+    } finally {
+      setIsConfirmingCancel(false);
+    }
   };
 
   if (!voucherData) {
@@ -326,6 +397,92 @@ const RedeemVoucher = () => {
                       : 'This voucher is not available for redemption at this time.'
                     }
                   </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Dispute Status Alert */}
+          {voucherData.dispute_status === '1' && (
+            <div className="bg-orange-50 border border-orange-200 rounded-2xl p-6 mb-6">
+              <div className="flex items-start space-x-3">
+                <AlertTriangle className="w-6 h-6 text-orange-600 mt-1 flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-orange-900 mb-2">Voucher Cancellation Requested</h3>
+                  <p className="text-orange-800 text-sm mb-4">
+                    The voucher owner has requested to cancel this voucher. You can confirm the cancellation to refund the owner, or contact support if you disagree.
+                  </p>
+                  {voucherData.dispute_reason && (
+                    <div className="bg-orange-100 rounded-lg p-3 mb-4">
+                      <p className="text-sm font-medium text-orange-900 mb-1">Reason for cancellation:</p>
+                      <p className="text-sm text-orange-800 italic">"{voucherData.dispute_reason}"</p>
+                    </div>
+                  )}
+                  <button
+                    onClick={handleConfirmCancel}
+                    disabled={isConfirmingCancel}
+                    className="bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 transition-colors font-semibold disabled:opacity-50 flex items-center space-x-2"
+                  >
+                    {isConfirmingCancel ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Confirming...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>✅</span>
+                        <span>Confirm Cancellation</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Cancel Button for Disputed Vouchers - Always Show */}
+          {voucherData.dispute_status === '1' && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mb-6">
+              <div className="text-center">
+                <h3 className="font-semibold text-red-900 mb-2">Voucher in Dispute</h3>
+                <p className="text-red-800 text-sm mb-4">
+                  This voucher is currently in dispute and cannot be redeemed until the dispute is resolved.
+                </p>
+                <button
+                  onClick={handleConfirmCancel}
+                  disabled={isConfirmingCancel}
+                  className="bg-red-600 text-white py-3 px-6 rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:opacity-50 flex items-center space-x-2 mx-auto"
+                >
+                  {isConfirmingCancel ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Confirming Cancellation...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>❌</span>
+                      <span>Confirm Cancellation & Refund Owner</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Error Alert */}
+          {showErrorAlert && errorMessage && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mb-6">
+              <div className="flex items-start space-x-3">
+                <AlertTriangle className="w-6 h-6 text-red-600 mt-1 flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-red-900 mb-2">Error</h3>
+                  <p className="text-red-800 text-sm mb-4">{errorMessage}</p>
+                  <button
+                    onClick={() => setShowErrorAlert(false)}
+                    className="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors font-semibold"
+                  >
+                    Dismiss
+                  </button>
                 </div>
               </div>
             </div>
@@ -564,6 +721,11 @@ const RedeemVoucher = () => {
                   </div>
                   <p className="text-sm text-neutral-600 mt-1">
                     Available: {formatCurrency(getAvailableAmount())}
+                    {voucherData.available_amount !== undefined && voucherData.available_amount !== voucherData.total_amount && (
+                      <span className="ml-2 text-neutral-500">
+                        (Total: {formatCurrency(voucherData.total_amount || 0)})
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -701,6 +863,8 @@ const RedeemVoucher = () => {
                   <p className="text-neutral-600 mb-4">
                     {voucherData.type === 'prepaid' 
                       ? `${formatCurrency(parseFloat(redeemAmount) || 0)} will be added to your CredoSafe wallet instantly.`
+                      : voucherData.type === 'work_order'
+                      ? `${formatCurrency(getAvailableMilestoneAmount())} will be added to your CredoSafe wallet instantly.`
                       : `${formatCurrency(getAvailableAmount())} will be added to your CredoSafe wallet instantly.`
                     }
                   </p>
@@ -808,8 +972,12 @@ const RedeemVoucher = () => {
             <h2 className="text-xl font-bold text-neutral-900 mb-2">Redemption Successful!</h2>
             <p className="text-neutral-600 mb-6">
               {withdrawalMethod === 'wallet' 
-                ? `${voucherData.type === 'prepaid' ? formatCurrency(parseFloat(redeemAmount) || 0) : formatCurrency(getAvailableAmount())} has been added to your wallet.`
-                : `${voucherData.type === 'prepaid' ? formatCurrency(parseFloat(redeemAmount) || 0) : formatCurrency(getAvailableAmount())} will be transferred to your bank account within 1-3 business days.`
+                ? `${voucherData.type === 'prepaid' ? formatCurrency(parseFloat(redeemAmount) || 0) : 
+                    voucherData.type === 'work_order' ? formatCurrency(getAvailableMilestoneAmount()) : 
+                    formatCurrency(getAvailableAmount())} has been added to your wallet.`
+                : `${voucherData.type === 'prepaid' ? formatCurrency(parseFloat(redeemAmount) || 0) : 
+                    voucherData.type === 'work_order' ? formatCurrency(getAvailableMilestoneAmount()) : 
+                    formatCurrency(getAvailableAmount())} will be transferred to your bank account within 1-3 business days.`
               }
             </p>
             <button
