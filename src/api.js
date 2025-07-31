@@ -2,7 +2,7 @@
 const getApiBaseUrl = () => {
   // Check if we're in production (on render.com)
   if (window.location.hostname.includes('onrender.com') || window.location.protocol === 'https:') {
-    return 'https://credosafe.onrender.com/api';
+    return 'https://server-b6ns.onrender.com/api';
   }
   // Development fallback
   return import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
