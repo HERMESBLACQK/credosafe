@@ -390,6 +390,11 @@ export const apiService = {
 
   // Voucher endpoints (all require authentication)
   vouchers: {
+    // Get all vouchers (for admin or general use)
+    getAll: async () => {
+      return authenticatedApiRequest('/vouchers');
+    },
+
     // Get user's vouchers
     getMyVouchers: async () => {
       return authenticatedApiRequest('/vouchers/my-vouchers');

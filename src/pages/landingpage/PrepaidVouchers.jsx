@@ -44,7 +44,7 @@ const PrepaidVouchers = () => {
     {
       icon: <DollarSign className="w-6 h-6" />,
       title: "Flexible Loading",
-      description: "Load any amount from $1 to $10,000 per voucher"
+      description: "Load any amount from ₦1 to ₦10,000 per voucher"
     },
     {
       icon: <Smartphone className="w-6 h-6" />,

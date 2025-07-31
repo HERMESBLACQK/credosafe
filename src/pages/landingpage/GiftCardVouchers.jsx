@@ -44,7 +44,7 @@ const GiftCardVouchers = () => {
     {
       icon: <DollarSign className="w-6 h-6" />,
       title: "Flexible Amounts",
-      description: "Choose any amount from $1 to $1,000 per gift card"
+      description: "Choose any amount from ₦1 to ₦1,000 per gift card"
     },
     {
       icon: <Zap className="w-6 h-6" />,

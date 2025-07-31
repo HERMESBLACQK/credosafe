@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import apiService from '../../api';
 
 // Async thunks for vouchers
 export const createVoucher = createAsyncThunk(
@@ -35,16 +35,11 @@ export const fetchVouchers = createAsyncThunk(
         return [];
       }
 
-      // Fetch from backend API
-      const response = await axios.get('http://localhost:5000/api/vouchers', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      // Fetch from backend API using apiService
+      const response = await apiService.vouchers.getAll();
       
-      console.log('Vouchers fetched successfully:', response.data);
-      return response.data.data || [];
+      console.log('Vouchers fetched successfully:', response);
+      return response.data || [];
     } catch (error) {
       console.error('Error fetching vouchers:', error);
       
