@@ -22,6 +22,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
+import OTPModal from '../components/OTPModal';
 
 const RedeemVoucher = () => {
   const navigate = useNavigate();
@@ -36,6 +37,13 @@ const RedeemVoucher = () => {
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showErrorAlert, setShowErrorAlert] = useState(false);
+  
+  // OTP states for prepaid vouchers
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [isOtpVerified, setIsOtpVerified] = useState(false);
+  const [isRequestingOTP, setIsRequestingOTP] = useState(false);
 
   // Voucher data from navigation state
   const [voucherData, setVoucherData] = useState(null);
@@ -127,7 +135,8 @@ const RedeemVoucher = () => {
     } else if (voucherData.type === 'purchase_escrow') {
       return voucherData.status === 'available';
     } else if (voucherData.type === 'prepaid') {
-      return voucherData.status === 'active' && getAvailableAmount() > 0;
+      // For prepaid vouchers, also check if OTP is verified
+      return voucherData.status === 'active' && getAvailableAmount() > 0 && isOtpVerified;
     } else if (voucherData.type === 'gift_card') {
       return voucherData.status === 'active';
     }
@@ -321,6 +330,65 @@ const RedeemVoucher = () => {
     }
   };
 
+  // OTP handling functions for prepaid vouchers
+  const handleRequestOTP = async () => {
+    if (!voucherData?.voucher_code) return;
+    
+    setIsRequestingOTP(true);
+    setOtpError('');
+    try {
+      console.log('🔍 Requesting OTP for prepaid voucher:', voucherData.voucher_code);
+      const response = await apiService.vouchers.requestRedemptionOTP(voucherData.voucher_code);
+      
+      console.log('📡 OTP request response:', response);
+      
+      if (response.success) {
+        console.log('✅ OTP request successful');
+        setShowOTPModal(true);
+      } else {
+        console.error('❌ OTP request failed:', response.message);
+        setOtpError(response.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      console.error('❌ Error requesting OTP:', error);
+      setOtpError('Error requesting OTP. Please try again.');
+    } finally {
+      setIsRequestingOTP(false);
+    }
+  };
+
+  const handleVerifyOTP = async (otp) => {
+    if (!voucherData?.voucher_code) return;
+    
+    setOtpLoading(true);
+    setOtpError('');
+    try {
+      console.log('🔍 Verifying OTP for prepaid voucher:', voucherData.voucher_code);
+      const response = await apiService.vouchers.verifyRedemptionOTP(voucherData.voucher_code, otp);
+      
+      console.log('📡 OTP verification response:', response);
+      
+      if (response.success) {
+        console.log('✅ OTP verification successful');
+        setIsOtpVerified(true);
+        setShowOTPModal(false);
+        setOtpError('');
+      } else {
+        console.error('❌ OTP verification failed:', response.message);
+        setOtpError(response.message || 'Invalid OTP');
+      }
+    } catch (error) {
+      console.error('❌ Error verifying OTP:', error);
+      setOtpError('Error verifying OTP. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleResendOTP = async (email) => {
+    return handleRequestOTP();
+  };
+
   if (!voucherData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-primary-50 flex items-center justify-center">
@@ -480,6 +548,27 @@ const RedeemVoucher = () => {
                   <button
                     onClick={() => setShowErrorAlert(false)}
                     className="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors font-semibold"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* OTP Success Alert for Prepaid Vouchers */}
+          {voucherData.type === 'prepaid' && isOtpVerified && (
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-6 mb-6">
+              <div className="flex items-start space-x-3">
+                <CheckCircle className="w-6 h-6 text-green-600 mt-1 flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-green-900 mb-2">Identity Verified</h3>
+                  <p className="text-green-800 text-sm mb-4">
+                    Your identity has been verified successfully. You can now proceed with redeeming your prepaid voucher.
+                  </p>
+                  <button
+                    onClick={() => setIsOtpVerified(false)}
+                    className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors font-semibold"
                   >
                     Dismiss
                   </button>
@@ -728,6 +817,44 @@ const RedeemVoucher = () => {
                     )}
                   </p>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* OTP Request Section for Prepaid Vouchers */}
+          {voucherData.type === 'prepaid' && voucherData.status === 'active' && getAvailableAmount() > 0 && !isOtpVerified && (
+            <div className="bg-white rounded-2xl shadow-soft p-6 mb-6">
+              <h2 className="text-xl font-bold text-neutral-900 mb-4">Verification Required</h2>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="w-8 h-8 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+                  Verify Your Identity
+                </h3>
+                <p className="text-neutral-600 mb-6">
+                  To redeem this prepaid voucher, you need to verify your identity with a one-time password (OTP) sent to your email.
+                </p>
+                <button
+                  onClick={handleRequestOTP}
+                  disabled={isRequestingOTP}
+                  className="bg-primary-600 text-white py-3 px-6 rounded-lg hover:bg-primary-700 transition-colors font-semibold disabled:opacity-50 flex items-center space-x-2 mx-auto"
+                >
+                  {isRequestingOTP ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Sending OTP...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-5 h-5" />
+                      <span>Request OTP</span>
+                    </>
+                  )}
+                </button>
+                {otpError && (
+                  <p className="text-red-600 text-sm mt-3">{otpError}</p>
+                )}
               </div>
             </div>
           )}
@@ -989,6 +1116,17 @@ const RedeemVoucher = () => {
           </motion.div>
         </div>
       )}
+
+      {/* OTP Modal for Prepaid Voucher Redemption */}
+      <OTPModal
+        isOpen={showOTPModal}
+        onClose={() => setShowOTPModal(false)}
+        onVerify={handleVerifyOTP}
+        onResend={handleResendOTP}
+        email={voucherData?.user_email || ''}
+        loading={otpLoading}
+        error={otpError}
+      />
       
       {/* Floating Footer Navigation */}
       <FloatingFooter />

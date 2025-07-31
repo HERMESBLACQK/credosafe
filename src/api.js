@@ -492,6 +492,22 @@ export const apiService = {
         method: 'POST',
         body: JSON.stringify({ voucherId })
       });
+    },
+
+    // Request OTP for prepaid voucher redemption
+    requestRedemptionOTP: async (voucherCode) => {
+      return authenticatedApiRequest('/vouchers/request-redemption-otp', {
+        method: 'POST',
+        body: JSON.stringify({ voucherCode })
+      });
+    },
+
+    // Verify OTP for prepaid voucher redemption
+    verifyRedemptionOTP: async (voucherCode, otp) => {
+      return authenticatedApiRequest('/vouchers/verify-redemption-otp', {
+        method: 'POST',
+        body: JSON.stringify({ voucherCode, otp })
+      });
     }
   },
 
