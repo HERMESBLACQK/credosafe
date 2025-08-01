@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { 
   Shield, 
   ArrowLeft,
@@ -18,14 +19,26 @@ import {
   EyeOff
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
+import apiService from '../api';
+import { showToast } from '../store/slices/toastSlice';
+import { useLoading } from '../contexts/LoadingContext';
 
 const WalletTransactions = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { setLoading } = useLoading();
+  
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [showBalance, setShowBalance] = useState(true);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [transactions, setTransactions] = useState([]);
+  const [filteredTransactions, setFilteredTransactions] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -33,103 +46,63 @@ const WalletTransactions = () => {
     transition: { duration: 0.6 }
   };
 
-  // Mock wallet transaction data
-  const [transactions, setTransactions] = useState([
-    {
-      id: '1',
-      type: 'funding',
-      amount: 500.00,
-      description: 'Bank Transfer',
-      date: '2024-01-15T10:30:00Z',
-      status: 'completed',
-      reference: 'WT-001',
-      method: 'Bank Transfer',
-      bankName: 'GT Bank'
-    },
-    {
-      id: '2',
-      type: 'withdrawal',
-      amount: -150.25,
-      description: 'Withdrawal to GT Bank',
-      date: '2024-01-14T14:20:00Z',
-      status: 'completed',
-      reference: 'WT-002',
-      method: 'Bank Transfer',
-      bankName: 'GT Bank',
-      accountNumber: '0123456789'
-    },
-    {
-      id: '3',
-      type: 'funding',
-      amount: 750.00,
-      description: 'Card Payment',
-      date: '2024-01-13T09:15:00Z',
-      status: 'completed',
-      reference: 'WT-003',
-      method: 'Card Payment',
-      cardType: 'Visa'
-    },
-    {
-      id: '4',
-      type: 'withdrawal',
-      amount: -200.00,
-      description: 'Withdrawal to Access Bank',
-      date: '2024-01-12T16:45:00Z',
-      status: 'pending',
-      reference: 'WT-004',
-      method: 'Bank Transfer',
-      bankName: 'Access Bank',
-      accountNumber: '9876543210'
-    },
-    {
-      id: '5',
-      type: 'funding',
-      amount: 1000.00,
-      description: 'USSD Payment',
-      date: '2024-01-11T11:30:00Z',
-      status: 'completed',
-      reference: 'WT-005',
-      method: 'USSD',
-      bankName: 'First Bank'
-    },
-    {
-      id: '6',
-      type: 'withdrawal',
-      amount: -75.50,
-      description: 'Withdrawal to Zenith Bank',
-      date: '2024-01-10T13:20:00Z',
-      status: 'failed',
-      reference: 'WT-006',
-      method: 'Bank Transfer',
-      bankName: 'Zenith Bank',
-      accountNumber: '5555666677'
-    },
-    {
-      id: '7',
-      type: 'funding',
-      amount: 250.00,
-      description: 'Mobile Money',
-      date: '2024-01-09T08:45:00Z',
-      status: 'completed',
-      reference: 'WT-007',
-      method: 'Mobile Money',
-      provider: 'Paga'
-    },
-    {
-      id: '8',
-      type: 'withdrawal',
-      amount: -300.00,
-      description: 'Withdrawal to UBA',
-      date: '2024-01-08T15:30:00Z',
-      status: 'completed',
-      reference: 'WT-008',
-      method: 'Bank Transfer',
-      bankName: 'UBA',
-      accountNumber: '1122334455'
+  // Fetch wallet balance
+  const fetchWalletBalance = async () => {
+    try {
+      const response = await apiService.payments.getWalletBalance();
+      if (response.success) {
+        setWalletBalance(response.data.balance);
+      }
+    } catch (error) {
+      console.error('Error fetching wallet balance:', error);
+      dispatch(showToast({ type: 'error', message: 'Failed to fetch wallet balance' }));
     }
-  ]);
+  };
 
-  const [filteredTransactions, setFilteredTransactions] = useState(transactions);
+  // Fetch transactions
+  const fetchTransactions = async (page = 1) => {
+    try {
+      setIsLoading(true);
+      const response = await apiService.payments.getWalletTransactions(page, 10);
+      if (response.success) {
+        setTransactions(response.data.transactions);
+        setFilteredTransactions(response.data.transactions);
+        setCurrentPage(page);
+        setTotalPages(response.data.pagination.pages);
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      dispatch(showToast({ type: 'error', message: 'Failed to fetch transactions' }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    fetchWalletBalance();
+    fetchTransactions();
+  }, []);
+
+  // Filter transactions based on search and filters
+  useEffect(() => {
+    let filtered = transactions;
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(transaction =>
+        transaction.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.reference?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filter by type
+    if (selectedType !== 'all') {
+      filtered = filtered.filter(transaction => transaction.type === selectedType);
+    }
+
+    setFilteredTransactions(filtered);
+  }, [transactions, searchTerm, selectedType]);
 
   // Filter transactions based on search and filters
   useEffect(() => {

@@ -21,6 +21,7 @@ import RedeemVoucher from './pages/RedeemVoucher';
 import Settings from './pages/Settings';
 import CreateVoucher from './pages/CreateVoucher';
 import Wallet from './pages/Wallet';
+import Withdraw from './pages/Withdraw';
 import Profile from './pages/Profile';
 import DeviceManagement from './pages/DeviceManagement';
 import WalletTransactions from './pages/WalletTransactions';
@@ -69,6 +70,7 @@ function App() {
                 <Route path="/redeem-voucher" element={<PrivateRoute><RedeemVoucher /></PrivateRoute>} />
                 <Route path="/create-voucher" element={<PrivateRoute><CreateVoucher /></PrivateRoute>} />
                 <Route path="/wallet" element={<PrivateRoute><Wallet /></PrivateRoute>} />
+                <Route path="/withdraw" element={<PrivateRoute><Withdraw /></PrivateRoute>} />
                 <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
                 <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
                 <Route path="/device-management" element={<PrivateRoute><DeviceManagement /></PrivateRoute>} />

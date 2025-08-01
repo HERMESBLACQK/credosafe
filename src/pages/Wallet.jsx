@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { 
   Shield, 
   Wallet as WalletIcon, 
@@ -19,24 +20,28 @@ import {
   Calendar,
   ArrowRight,
   CreditCard,
-  Building
+  Building,
+  Phone
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
+import apiService from '../api';
+import { showToast } from '../store/slices/toastSlice';
+import { useLoading } from '../contexts/LoadingContext';
 
 const Wallet = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const dispatch = useDispatch();
+  const { startGlobalLoading, stopGlobalLoading } = useLoading();
+  
   const [showBalance, setShowBalance] = useState(true);
   const [showFundModal, setShowFundModal] = useState(false);
-  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
-  const [withdrawForm, setWithdrawForm] = useState({
-    amount: '',
-    accountNumber: '',
-    bankName: '',
-    accountName: ''
-  });
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -44,46 +49,65 @@ const Wallet = () => {
     transition: { duration: 0.6 }
   };
 
-  // Mock wallet data
-  const currentBalance = 1250.75;
-  const recentTransactions = [
-    {
-      id: '1',
-      type: 'funding',
-      amount: 500.00,
-      description: 'Bank Transfer',
-      date: '2024-01-15T10:30:00Z',
-      status: 'completed',
-      reference: 'WT-001'
-    },
-    {
-      id: '2',
-      type: 'withdrawal',
-      amount: -150.25,
-      description: 'Withdrawal to GT Bank',
-      date: '2024-01-14T14:20:00Z',
-      status: 'completed',
-      reference: 'WT-002'
-    },
-    {
-      id: '3',
-      type: 'funding',
-      amount: 750.00,
-      description: 'Card Payment',
-      date: '2024-01-13T09:15:00Z',
-      status: 'completed',
-      reference: 'WT-003'
-    },
-    {
-      id: '4',
-      type: 'withdrawal',
-      amount: -200.00,
-      description: 'Withdrawal to Access Bank',
-      date: '2024-01-12T16:45:00Z',
-      status: 'pending',
-      reference: 'WT-004'
+  // Fetch wallet balance
+  const fetchWalletBalance = async () => {
+    try {
+      setIsLoadingBalance(true);
+      const response = await apiService.payments.getWalletBalance();
+      if (response.success) {
+        setWalletBalance(response.data.balance);
+      }
+    } catch (error) {
+      console.error('Error fetching wallet balance:', error);
+      dispatch(showToast({ type: 'error', message: 'Failed to fetch wallet balance' }));
+    } finally {
+      setIsLoadingBalance(false);
     }
-  ];
+  };
+
+  // Fetch recent transactions
+  const fetchRecentTransactions = async () => {
+    try {
+      setIsLoadingTransactions(true);
+      const response = await apiService.payments.getWalletTransactions(1, 5);
+      if (response.success) {
+        setRecentTransactions(response.data.transactions);
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      dispatch(showToast({ type: 'error', message: 'Failed to fetch transactions' }));
+    } finally {
+      setIsLoadingTransactions(false);
+    }
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    fetchWalletBalance();
+    fetchRecentTransactions();
+  }, []);
+
+  // Check for payment status from URL params
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const amount = searchParams.get('amount');
+    const message = searchParams.get('message');
+
+    if (status === 'success') {
+      dispatch(showToast({ 
+        type: 'success', 
+        message: `Payment successful! Your wallet has been credited with ₦${amount}` 
+      }));
+      // Refresh balance and transactions
+      fetchWalletBalance();
+      fetchRecentTransactions();
+    } else if (status === 'error') {
+      dispatch(showToast({ 
+        type: 'error', 
+        message: message || 'Payment failed. Please try again.' 
+      }));
+    }
+  }, [searchParams, dispatch]);
 
   const banks = [
     'Access Bank',
@@ -143,42 +167,35 @@ const Wallet = () => {
     return type === 'funding' ? 'text-green-600' : 'text-red-600';
   };
 
-  const handleFundSubmit = (e) => {
+  const handleFundSubmit = async (e) => {
     e.preventDefault();
-    if (fundAmount && parseFloat(fundAmount) > 0) {
-      console.log('Funding wallet with:', fundAmount);
-      setShowFundModal(false);
-      setFundAmount('');
+    if (!fundAmount || parseFloat(fundAmount) < 100) {
+      dispatch(showToast({ type: 'error', message: 'Amount must be at least ₦100' }));
+      return;
     }
-  };
+    if (!phone) {
+      dispatch(showToast({ type: 'error', message: 'Please enter your phone number' }));
+      return;
+    }
 
-  const handleWithdrawSubmit = (e) => {
-    e.preventDefault();
-    if (withdrawForm.amount && withdrawForm.accountNumber && withdrawForm.bankName && isVerified) {
-      console.log('Processing withdrawal:', withdrawForm);
-      setShowWithdrawModal(false);
-      setWithdrawForm({
-        amount: '',
-        accountNumber: '',
-        bankName: '',
-        accountName: ''
+    try {
+      startGlobalLoading();
+      const response = await apiService.payments.fundWallet({
+        amount: parseFloat(fundAmount),
+        phone: phone
       });
-      setIsVerified(false);
-    }
-  };
 
-  const verifyAccount = async () => {
-    if (withdrawForm.accountNumber && withdrawForm.bankName) {
-      setIsVerifying(true);
-      // Simulate API call
-      setTimeout(() => {
-        setWithdrawForm(prev => ({
-          ...prev,
-          accountName: 'John Doe'
-        }));
-        setIsVerified(true);
-        setIsVerifying(false);
-      }, 2000);
+      if (response.success) {
+        // Redirect to Flutterwave checkout
+        window.location.href = response.data.checkoutUrl;
+      } else {
+        dispatch(showToast({ type: 'error', message: response.message }));
+      }
+    } catch (error) {
+      console.error('Error funding wallet:', error);
+      dispatch(showToast({ type: 'error', message: 'Failed to initialize payment' }));
+    } finally {
+      stopGlobalLoading();
     }
   };
 
@@ -227,7 +244,7 @@ const Wallet = () => {
             </div>
             <div className="text-center mb-6">
               <p className="text-4xl font-bold text-primary-600 mb-2">
-                {showBalance ? formatCurrency(currentBalance) : '••••••'}
+                {showBalance ? formatCurrency(walletBalance) : '••••••'}
               </p>
               <p className="text-sm text-neutral-600">Available for transactions</p>
             </div>
@@ -242,7 +259,7 @@ const Wallet = () => {
                 <span>Fund Wallet</span>
               </button>
               <button
-                onClick={() => setShowWithdrawModal(true)}
+                onClick={() => navigate('/withdraw')}
                 className="flex items-center justify-center space-x-2 bg-gradient-to-r from-red-500 to-red-600 text-white py-3 px-6 rounded-lg hover:opacity-90 transition-opacity"
               >
                 <Minus className="w-5 h-5" />
@@ -352,8 +369,25 @@ const Wallet = () => {
                     onChange={(e) => setFundAmount(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     placeholder="0.00"
-                    min="0"
+                    min="100"
                     step="0.01"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  Phone Number
+                </label>
+                <div className="relative">
+                  <Phone className="w-5 h-5 text-neutral-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="08012345678"
                     required
                   />
                 </div>
@@ -379,121 +413,7 @@ const Wallet = () => {
         </div>
       )}
 
-      {/* Withdraw Modal */}
-      {showWithdrawModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white rounded-2xl shadow-large max-w-md w-full p-6"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-neutral-900">Withdraw Funds</h2>
-              <button
-                onClick={() => setShowWithdrawModal(false)}
-                className="p-2 text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleWithdrawSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">
-                  Amount (₦)
-                </label>
-                <div className="relative">
-                  <DollarSign className="w-5 h-5 text-neutral-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                  <input
-                    type="number"
-                    value={withdrawForm.amount}
-                    onChange={(e) => setWithdrawForm(prev => ({ ...prev, amount: e.target.value }))}
-                    className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    required
-                  />
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">
-                  Account Number
-                </label>
-                <input
-                  type="text"
-                  value={withdrawForm.accountNumber}
-                  onChange={(e) => setWithdrawForm(prev => ({ ...prev, accountNumber: e.target.value }))}
-                  className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Enter account number"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">
-                  Bank Name
-                </label>
-                <select
-                  value={withdrawForm.bankName}
-                  onChange={(e) => setWithdrawForm(prev => ({ ...prev, bankName: e.target.value }))}
-                  className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Select Bank</option>
-                  {banks.map((bank) => (
-                    <option key={bank} value={bank}>{bank}</option>
-                  ))}
-                </select>
-              </div>
-
-              {withdrawForm.accountNumber && withdrawForm.bankName && (
-                <div className="flex space-x-3">
-                  <button
-                    type="button"
-                    onClick={verifyAccount}
-                    disabled={isVerifying}
-                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                  >
-                    {isVerifying ? 'Verifying...' : 'Verify Account'}
-                  </button>
-                </div>
-              )}
-
-              {isVerified && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <div>
-                      <p className="text-sm font-medium text-green-900">Account Verified</p>
-                      <p className="text-sm text-green-700">{withdrawForm.accountName}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowWithdrawModal(false)}
-                  className="flex-1 px-4 py-3 border border-neutral-300 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!isVerified}
-                  className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-                >
-                  Proceed
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
       
       {/* Floating Footer Navigation */}
       <FloatingFooter />

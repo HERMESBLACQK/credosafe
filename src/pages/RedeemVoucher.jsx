@@ -508,34 +508,7 @@ const RedeemVoucher = () => {
             </div>
           )}
 
-          {/* Cancel Button for Disputed Vouchers - Always Show */}
-          {voucherData.dispute_status === '1' && (
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mb-6">
-              <div className="text-center">
-                <h3 className="font-semibold text-red-900 mb-2">Voucher in Dispute</h3>
-                <p className="text-red-800 text-sm mb-4">
-                  This voucher is currently in dispute and cannot be redeemed until the dispute is resolved.
-                </p>
-                <button
-                  onClick={handleConfirmCancel}
-                  disabled={isConfirmingCancel}
-                  className="bg-red-600 text-white py-3 px-6 rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:opacity-50 flex items-center space-x-2 mx-auto"
-                >
-                  {isConfirmingCancel ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Confirming Cancellation...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>❌</span>
-                      <span>Confirm Cancellation & Refund Owner</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
+
 
           {/* Error Alert */}
           {showErrorAlert && errorMessage && (

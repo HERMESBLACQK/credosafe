@@ -81,10 +81,10 @@ const Transactions = () => {
         for (const voucherType of voucherTypes) {
           try {
             console.log(`🎨 Fetching themes for ${voucherType}...`);
-            const response = await apiService.themes.getByVoucherType(voucherType);
-            console.log(`🎨 Fetched themes for ${voucherType}:`, response);
-            if (response.success) {
-              themesData[voucherType] = response.data || [];
+          const response = await apiService.themes.getByVoucherType(voucherType);
+          console.log(`🎨 Fetched themes for ${voucherType}:`, response);
+          if (response.success) {
+            themesData[voucherType] = response.data || [];
               console.log(`🎨 ${voucherType} themes count:`, themesData[voucherType].length);
             } else {
               console.warn(`⚠️ Failed to fetch themes for ${voucherType}:`, response.message);

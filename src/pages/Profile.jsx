@@ -196,15 +196,15 @@ const Profile = () => {
             <p className="text-neutral-600 font-medium">Loading your profile...</p>
           </div>
         ) : (
-          <motion.div
-            variants={fadeInUp}
-            initial="initial"
-            animate="animate"
-          >
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-neutral-900 mb-2">Profile</h1>
-              <p className="text-neutral-600">Manage your account information</p>
-            </div>
+        <motion.div
+          variants={fadeInUp}
+          initial="initial"
+          animate="animate"
+        >
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-neutral-900 mb-2">Profile</h1>
+            <p className="text-neutral-600">Manage your account information</p>
+          </div>
 
           {/* Profile Header */}
           <div className="bg-white rounded-2xl shadow-soft p-8 mb-6">

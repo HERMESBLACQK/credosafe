@@ -207,6 +207,81 @@ const apiService = {
       }
     },
 
+    sendPasswordOTP: async () => {
+      try {
+        const response = await apiClient.post('/auth/send-password-otp');
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to send password OTP');
+      }
+    },
+
+    verifyPasswordOTP: async (otpValue) => {
+      try {
+        const response = await apiClient.post('/auth/verify-password-otp', { otp: otpValue });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Password OTP verification failed');
+      }
+    },
+
+    changePassword: async (passwordData) => {
+      try {
+        const response = await apiClient.put('/auth/change-password', passwordData);
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Password change failed');
+      }
+    },
+
+    resendOTP: async (email) => {
+      try {
+        const response = await apiClient.post('/auth/resend-otp', { email });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to resend OTP');
+      }
+    },
+
+    updateProfile: async (profileData) => {
+      try {
+        const response = await apiClient.put('/auth/profile', profileData);
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Profile update failed');
+      }
+    },
+
+    updateSettings: async (settingsData) => {
+      try {
+        const response = await apiClient.put('/auth/settings', settingsData);
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Settings update failed');
+      }
+    },
+
+    getDevices: async () => {
+      try {
+        const response = await apiClient.get('/auth/devices', {
+          cacheKey: 'user_devices',
+          cacheTtl: 300000 // 5 minutes
+        });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to fetch devices');
+      }
+    },
+
+    upgradeTier: async (tierData) => {
+      try {
+        const response = await apiClient.post('/auth/upgrade-tier', tierData);
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Tier upgrade failed');
+      }
+    },
+
     getProfile: async () => {
       try {
         const response = await apiClient.get('/auth/profile', {
@@ -249,44 +324,7 @@ const apiService = {
       }
     },
 
-    upgradeTier: async (tierData) => {
-      try {
-        const response = await apiClient.post('/auth/upgrade-tier', tierData);
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to upgrade tier');
-      }
-    },
 
-    getDevices: async () => {
-      try {
-        const response = await apiClient.get('/auth/devices', {
-          cacheKey: 'user_devices',
-          cacheTtl: 300000 // 5 minutes
-        });
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch devices');
-      }
-    },
-
-    updateProfile: async (profileData) => {
-      try {
-        const response = await apiClient.put('/auth/profile', profileData);
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to update profile');
-      }
-    },
-
-    updateSettings: async (settingsData) => {
-      try {
-        const response = await apiClient.put('/auth/settings', settingsData);
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to update settings');
-      }
-    }
   },
 
   // Voucher endpoints
@@ -495,10 +533,15 @@ const apiService = {
 
     searchByCode: async (voucherCode) => {
       try {
-        const response = await apiClient.get(`/vouchers/search/${voucherCode}`, {
-          cacheKey: `voucher_search_${voucherCode}`,
-          cacheTtl: 300000 // 5 minutes
-        });
+        // Clear any cached search results to ensure fresh data
+        const cacheKey = `voucher_search_${voucherCode}`;
+        try {
+          sessionStorage.removeItem(`cache_${cacheKey}`);
+        } catch (e) {
+          // Ignore cache clearing errors
+        }
+        
+        const response = await apiClient.get(`/vouchers/search/${voucherCode}`);
         return response.data;
       } catch (error) {
         throw new Error(error.response?.data?.message || 'Failed to search voucher');
@@ -549,6 +592,91 @@ const apiService = {
         return response.data;
       } catch (error) {
         throw new Error(error.response?.data?.message || 'Failed to fetch transactions');
+      }
+    }
+  },
+
+  // Payment endpoints
+  payments: {
+    // Initialize wallet funding
+    fundWallet: async (paymentData) => {
+      try {
+        const response = await apiClient.post('/payments/fund-wallet', paymentData);
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to initialize payment');
+      }
+    },
+
+    // Get wallet balance
+    getWalletBalance: async () => {
+      try {
+        const response = await apiClient.get('/payments/wallet-balance', {
+          cacheKey: 'wallet_balance',
+          cacheTtl: 60000 // 1 minute
+        });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to fetch wallet balance');
+      }
+    },
+
+    // Get wallet transactions
+    getWalletTransactions: async (page = 1, limit = 10) => {
+      try {
+        const response = await apiClient.get(`/payments/wallet-transactions?page=${page}&limit=${limit}`, {
+          cacheKey: `wallet_transactions_${page}`,
+          cacheTtl: 120000 // 2 minutes
+        });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to fetch wallet transactions');
+      }
+    },
+
+    // Get list of banks
+    getBanks: async () => {
+      try {
+        const response = await apiClient.get('/payments/banks', {
+          cacheKey: 'banks_list',
+          cacheTtl: 3600000 // 1 hour
+        });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to fetch banks');
+      }
+    },
+
+    // Verify bank account
+    verifyBankAccount: async (accountData) => {
+      try {
+        const response = await apiClient.post('/payments/verify-account', accountData);
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to verify bank account');
+      }
+    },
+
+    // Initiate withdrawal
+    withdraw: async (withdrawalData) => {
+      try {
+        const response = await apiClient.post('/payments/withdraw', withdrawalData);
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to initiate withdrawal');
+      }
+    },
+
+    // Get withdrawal transactions
+    getWithdrawals: async (page = 1, limit = 10) => {
+      try {
+        const response = await apiClient.get(`/payments/withdrawals?page=${page}&limit=${limit}`, {
+          cacheKey: `withdrawals_${page}`,
+          cacheTtl: 120000 // 2 minutes
+        });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to fetch withdrawals');
       }
     }
   }
