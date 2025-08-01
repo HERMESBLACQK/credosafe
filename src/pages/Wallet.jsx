@@ -186,9 +186,11 @@ const Wallet = () => {
       });
 
       if (response.success) {
+        console.log('✅ Payment initialized, redirecting to:', response.data.checkoutUrl);
         // Redirect to Flutterwave checkout
         window.location.href = response.data.checkoutUrl;
       } else {
+        console.error('❌ Payment initialization failed:', response);
         dispatch(showToast({ type: 'error', message: response.message }));
       }
     } catch (error) {
