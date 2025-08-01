@@ -36,7 +36,7 @@ const CreateVoucher = () => {
       description: "Create milestone-based or full payment vouchers for work orders. Redeem upon completion.",
       features: ["Milestone payments", "Full payment options", "Escrow protection", "Completion verification"],
       color: "from-blue-500 to-blue-600",
-      route: "/work-order-vouchers"
+      route: "/work-order"
     },
     {
       icon: <Shield className="w-8 h-8" />,
@@ -44,7 +44,7 @@ const CreateVoucher = () => {
       description: "Secure transactions with escrow protection. Both parties must agree before release.",
       features: ["Escrow protection", "Dual approval", "Secure transactions", "Dispute resolution"],
       color: "from-green-500 to-green-600",
-      route: "/purchase-escrow-vouchers"
+      route: "/purchase-escrow"
     },
     {
       icon: <CreditCard className="w-8 h-8" />,
@@ -52,7 +52,7 @@ const CreateVoucher = () => {
       description: "Load funds and use at participating businesses. Instant redemption available.",
       features: ["Prepaid balance", "Business network", "Instant redemption", "Balance tracking"],
       color: "from-purple-500 to-purple-600",
-      route: "/prepaid-vouchers"
+      route: "/prepaid"
     },
     {
       icon: <Gift className="w-8 h-8" />,
@@ -60,7 +60,7 @@ const CreateVoucher = () => {
       description: "Send anonymous or personalized gift cards. Flexible redemption options.",
       features: ["Anonymous sending", "Personalized messages", "Flexible amounts", "Digital delivery"],
       color: "from-pink-500 to-pink-600",
-      route: "/gift-card-vouchers"
+      route: "/gift-card"
     }
   ];
 

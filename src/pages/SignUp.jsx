@@ -14,13 +14,14 @@ import {
 } from 'lucide-react';
 import { loginUser } from '../store/slices/authSlice';
 import { showToast } from '../store/slices/uiSlice';
-import { apiService, apiUtils } from '../api';
+import apiService from '../api/index';
 import OTPModal from '../components/OTPModal';
+import { useLoading } from '../contexts/LoadingContext';
 
 const SignUp = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading } = useSelector((state) => state.auth);
+  const { isLoading } = useSelector((state) => state.auth);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -35,6 +36,7 @@ const SignUp = () => {
   
   // OTP Modal state
   const [showOTPModal, setShowOTPModal] = useState(false);
+  const { startLoading, stopLoading } = useLoading();
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState(null);
   const [pendingUserData, setPendingUserData] = useState(null);
@@ -101,6 +103,7 @@ const SignUp = () => {
     }
 
     try {
+      startLoading('signup', 'Creating your account...');
       // Prepare user data for registration
       const userData = {
         first_name: formData.firstName,
@@ -146,6 +149,8 @@ const SignUp = () => {
         message: 'Registration failed. Please check your connection and try again.', 
         type: 'error' 
       }));
+    } finally {
+      stopLoading('signup');
     }
   };
 
@@ -242,7 +247,7 @@ const SignUp = () => {
       </nav>
 
       {/* Sign Up Form */}
-      <div className="flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8">
+      <div className="flex items-center justify-center py-8 sm:py-12 lg:py-20 px-4 sm:px-6 lg:px-8">
         <motion.div
           variants={fadeInUp}
           initial="initial"

@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { useLoading } from '../contexts/LoadingContext';
+import Loader from '../components/Loader';
+import { useUser } from '../hooks/useUser';
 import { 
   Shield, 
   DollarSign, 
@@ -15,56 +18,71 @@ import {
 } from 'lucide-react';
 import { fetchVouchers } from '../store/slices/voucherSlice';
 import FloatingFooter from '../components/FloatingFooter';
-import apiService from '../api';
+
+
 
 const Dashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useSelector((state) => state.auth);
-  const { vouchers } = useSelector((state) => state.vouchers);
+  const { user, userProfile, isAuthenticated, isUserLoaded } = useUser();
+  const { vouchers = [] } = useSelector((state) => state.vouchers);
   const [userBalance, setUserBalance] = useState(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
+  const { startLoading, stopLoading } = useLoading();
 
   // Convert vouchers to transaction format for display
-  const recentTransactions = vouchers.slice(0, 4).map(voucher => ({
+  const recentTransactions = Array.isArray(vouchers) ? vouchers.slice(0, 4).map(voucher => ({
     id: voucher.id,
     type: 'funding',
     amount: parseFloat(voucher.total_amount),
     description: `${voucher.type.replace('-', ' ').toUpperCase()} Voucher Created`,
     date: voucher.created_at,
     status: voucher.status
-  }));
+  })) : [];
 
   useEffect(() => {
+    console.log('🔍 Dashboard useEffect - isAuthenticated:', isAuthenticated, 'user:', user);
+    
     if (!isAuthenticated) {
+      console.log('🔍 Not authenticated, redirecting to signin');
       navigate('/signin');
       return;
     }
     
     // Fetch user's vouchers
+    startLoading('dashboard', 'Loading dashboard data...');
     dispatch(fetchVouchers());
 
-    // Fetch user's wallet balance
-    const fetchBalance = async () => {
+    // Use balance from user profile
+    const fetchBalance = () => {
       try {
         setIsLoadingBalance(true);
-        const response = await apiService.vouchers.getBalance();
-        if (response.success) {
-          setUserBalance(response.data?.balance || 0);
+        console.log('🔍 Fetching balance from user:', userProfile?.wallet?.balance);
+        // Use balance from user profile
+        if (isUserLoaded && userProfile?.wallet?.balance !== undefined) {
+          setUserBalance(userProfile.wallet.balance);
         } else {
-          console.error('Failed to fetch balance:', response.error);
           setUserBalance(0);
         }
       } catch (error) {
-        console.error('Balance fetch error:', error);
+        console.error('Balance error:', error);
         setUserBalance(0);
       } finally {
         setIsLoadingBalance(false);
+        stopLoading('dashboard');
       }
     };
 
     fetchBalance();
-  }, [isAuthenticated, navigate, dispatch]);
+  }, [isAuthenticated, navigate, dispatch, user]);
+
+  // Separate useEffect for balance updates when user profile changes
+  useEffect(() => {
+    if (isUserLoaded && userProfile?.wallet?.balance !== undefined) {
+      console.log('🔍 Updating balance from userProfile:', userProfile.wallet.balance);
+      setUserBalance(userProfile.wallet.balance);
+    }
+  }, [userProfile?.wallet?.balance, isUserLoaded]);
 
 
 
@@ -113,7 +131,7 @@ const Dashboard = () => {
             >
               <div className="flex items-center space-x-2 text-neutral-600">
                 <User className="w-5 h-5" />
-                <span className="font-medium">{user?.name}</span>
+                <span className="font-medium">{userProfile.firstName || user?.firstName || user?.name}</span>
               </div>
             </div>
           </div>
@@ -123,10 +141,13 @@ const Dashboard = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div>
+          {/* User Data Display (for debugging) */}
+  
+          
           {/* Welcome Section */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-neutral-900 mb-2">
-              Welcome back, {user?.firstName || user?.name}!
+              Welcome back, {userProfile.firstName || user?.firstName || user?.name}!
             </h1>
             <p className="text-neutral-600">
               Here's your CredoSafe dashboard overview

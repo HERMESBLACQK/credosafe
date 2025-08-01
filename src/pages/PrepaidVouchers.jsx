@@ -18,15 +18,17 @@ import {
   Clock
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
-import apiService from '../api';
+import apiService from '../api/index';
 import { useDispatch } from 'react-redux';
 import { showToast } from '../store/slices/toastSlice';
+import { useLoading } from '../contexts/LoadingContext';
 
 const PrepaidVouchers = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [showBalance, setShowBalance] = useState(true);
   const [userBalance, setUserBalance] = useState(0);
+  const { startLoading, stopLoading, isLoading: checkLoading } = useLoading();
   const [formData, setFormData] = useState({
     voucherAmount: '',
     recipientName: '',
@@ -43,19 +45,25 @@ const PrepaidVouchers = () => {
   useEffect(() => {
     const fetchBalance = async () => {
       try {
+        console.log('🔄 Fetching balance...');
         const response = await apiService.vouchers.getBalance();
+        console.log('📡 Balance response:', response);
+        
         if (response.success) {
           setUserBalance(response.data?.balance || 0);
+          console.log('✅ Balance set to:', response.data?.balance || 0);
         } else {
+          console.error('❌ Balance fetch failed:', response.message);
           dispatch(showToast({
             message: response.message || 'Failed to fetch balance',
             type: 'error'
           }));
         }
       } catch (error) {
-        console.error('Balance fetch error:', error);
+        console.error('❌ Balance fetch error:', error);
+        console.error('❌ Error details:', error.message);
         dispatch(showToast({
-          message: 'Failed to fetch balance',
+          message: `Failed to fetch balance: ${error.message}`,
           type: 'error'
         }));
       }
@@ -87,7 +95,18 @@ const PrepaidVouchers = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Check if user has sufficient balance
+    const voucherAmount = parseFloat(formData.voucherAmount) || 0;
+    if (userBalance < voucherAmount) {
+      dispatch(showToast({
+        message: `Insufficient balance. You need ₦${voucherAmount.toLocaleString()} but have ₦${userBalance.toLocaleString()}`,
+        type: 'error'
+      }));
+      return;
+    }
+    
     try {
+      startLoading('create-prepaid', 'Creating prepaid voucher...');
       const voucherData = {
         voucherAmount: parseFloat(formData.voucherAmount),
         recipientName: formData.recipientName,
@@ -127,6 +146,8 @@ const PrepaidVouchers = () => {
         message: 'Failed to create voucher',
         type: 'error'
       }));
+    } finally {
+      stopLoading('create-prepaid');
     }
   };
 
@@ -234,7 +255,7 @@ const PrepaidVouchers = () => {
                             onClick={() => handleInputChange('voucherAmount', amount.toString())}
                             className="px-3 py-2 border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors text-sm"
                           >
-                            ${amount}
+                            ₦{amount}
                           </button>
                         ))}
                       </div>
@@ -402,10 +423,20 @@ const PrepaidVouchers = () => {
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 px-6 rounded-lg hover:opacity-90 transition-opacity font-semibold flex items-center justify-center space-x-2"
+                    disabled={checkLoading('create-prepaid')}
+                    className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 px-6 rounded-lg hover:opacity-90 transition-opacity font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
-                    <CreditCard className="w-5 h-5" />
-                    <span>Create Prepaid Voucher</span>
+                    {checkLoading('create-prepaid') ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Creating Prepaid Voucher...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-5 h-5" />
+                        <span>Create Prepaid Voucher</span>
+                      </>
+                    )}
                   </button>
                 </form>
               </div>
@@ -492,7 +523,7 @@ const PrepaidVouchers = () => {
                     <div className="bg-white rounded-lg p-4 text-center">
                       <p className="text-sm text-neutral-600 mb-1">Available Balance</p>
                       <p className="text-3xl font-bold text-purple-600">
-                        ${parseFloat(formData.voucherAmount) || 0}
+                        ₦{parseFloat(formData.voucherAmount) || 0}
                       </p>
                     </div>
 
@@ -533,7 +564,7 @@ const PrepaidVouchers = () => {
                           <span className="text-sm font-medium text-blue-900">Auto-Reload Enabled</span>
                         </div>
                         <p className="text-sm text-blue-700">
-                          ${formData.reloadAmount || 0} every {formData.reloadFrequency}
+                          ₦{formData.reloadAmount || 0} every {formData.reloadFrequency}
                         </p>
                       </div>
                     )}

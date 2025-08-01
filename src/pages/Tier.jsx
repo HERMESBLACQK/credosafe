@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { 
   Shield, 
   ArrowLeft,
@@ -21,14 +21,13 @@ import {
   Shield as SecurityIcon,
   Loader
 } from 'lucide-react';
-import { apiService } from '../api';
+import apiService from '../api/index';
 import { showToast } from '../store/slices/uiSlice';
 import FloatingFooter from '../components/FloatingFooter';
 
 const Tier = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
   
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [selectedTier, setSelectedTier] = useState(null);
@@ -41,7 +40,6 @@ const Tier = () => {
   });
   const [otp, setOtp] = useState('');
   const [currentTier, setCurrentTier] = useState(1);
-  const [loading, setLoading] = useState(false);
   const [fetchingTier, setFetchingTier] = useState(true);
   const [upgrading, setUpgrading] = useState(false);
 
@@ -232,12 +230,7 @@ const Tier = () => {
     }
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN'
-    }).format(amount);
-  };
+
 
   if (fetchingTier) {
     return (
@@ -348,49 +341,49 @@ const Tier = () => {
                   }`}
                   onClick={() => handleUpgradeClick(tier)}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-6">
-                      <div className={`w-20 h-20 bg-gradient-to-r ${tier.color} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                  <div className="flex items-start justify-between relative">
+                                         <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-6 w-full">
+                      <div className={`w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r ${tier.color} rounded-xl flex items-center justify-center flex-shrink-0 mx-auto sm:mx-0`}>
                         {tier.icon}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-3">
-                          <h3 className="text-2xl font-bold text-neutral-900">{tier.name}</h3>
+                      <div className="flex-1 text-center sm:text-left">
+                        <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-3">
+                          <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">{tier.name}</h3>
                           {tier.id === currentTier && (
-                            <span className="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full font-medium">Current</span>
+                            <span className="bg-green-100 text-green-800 text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-full font-medium self-start sm:self-auto">Current</span>
                           )}
-                          <span className="text-2xl font-bold text-neutral-900">{tier.price}</span>
+                          <span className="text-xl sm:text-2xl font-bold text-neutral-900">{tier.price}</span>
                         </div>
-                        <p className="text-neutral-600 mb-4 text-lg">{tier.description}</p>
+                        <p className="text-neutral-600 mb-4 text-sm sm:text-lg">{tier.description}</p>
                         
                         {/* Limits */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                          <div className="bg-white rounded-lg p-3">
+                        <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4">
+                          <div className="bg-white rounded-lg p-2 sm:p-3">
                             <p className="text-xs text-neutral-500 mb-1">Daily Limit</p>
-                            <p className="font-semibold text-neutral-900">₦{tier.limits.dailyTransaction.toLocaleString()}</p>
+                            <p className="font-semibold text-neutral-900 text-xs sm:text-sm">₦{tier.limits.dailyTransaction.toLocaleString()}</p>
                           </div>
-                          <div className="bg-white rounded-lg p-3">
+                          <div className="bg-white rounded-lg p-2 sm:p-3">
                             <p className="text-xs text-neutral-500 mb-1">Monthly Limit</p>
-                            <p className="font-semibold text-neutral-900">₦{tier.limits.monthlyTransaction.toLocaleString()}</p>
+                            <p className="font-semibold text-neutral-900 text-xs sm:text-sm">₦{tier.limits.monthlyTransaction.toLocaleString()}</p>
                           </div>
-                          <div className="bg-white rounded-lg p-3">
+                          <div className="bg-white rounded-lg p-2 sm:p-3">
                             <p className="text-xs text-neutral-500 mb-1">Max Voucher</p>
-                            <p className="font-semibold text-neutral-900">₦{tier.limits.maxVoucherAmount.toLocaleString()}</p>
+                            <p className="font-semibold text-neutral-900 text-xs sm:text-sm">₦{tier.limits.maxVoucherAmount.toLocaleString()}</p>
                           </div>
-                          <div className="bg-white rounded-lg p-3">
+                          <div className="bg-white rounded-lg p-2 sm:p-3">
                             <p className="text-xs text-neutral-500 mb-1">Daily Withdrawal</p>
-                            <p className="font-semibold text-neutral-900">₦{tier.limits.dailyWithdrawal.toLocaleString()}</p>
+                            <p className="font-semibold text-neutral-900 text-xs sm:text-sm">₦{tier.limits.dailyWithdrawal.toLocaleString()}</p>
                           </div>
                         </div>
 
                         {/* Features */}
                         <div className="mb-4">
-                          <h4 className="font-semibold text-neutral-900 mb-2">Features:</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <h4 className="font-semibold text-neutral-900 mb-2 text-sm sm:text-base">Features:</h4>
+                          <div className="grid grid-cols-1 gap-2">
                             {tier.features.map((feature, featureIndex) => (
                               <div key={featureIndex} className="flex items-center space-x-2">
-                                <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                                <span className="text-sm text-neutral-700">{feature}</span>
+                                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" />
+                                <span className="text-xs sm:text-sm text-neutral-700">{feature}</span>
                               </div>
                             ))}
                           </div>
@@ -398,13 +391,13 @@ const Tier = () => {
 
                         {/* Requirements for upgrade */}
                         {tier.id > currentTier && tier.requirements && (
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <h4 className="font-semibold text-blue-900 mb-2">Requirements for Upgrade:</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+                            <h4 className="font-semibold text-blue-900 mb-2 text-sm sm:text-base">Requirements for Upgrade:</h4>
+                            <div className="grid grid-cols-1 gap-2">
                               {tier.requirements.map((req, reqIndex) => (
                                 <div key={reqIndex} className="flex items-center space-x-2">
                                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                  <span className="text-sm text-blue-700">{req}</span>
+                                  <span className="text-xs sm:text-sm text-blue-700">{req}</span>
                                 </div>
                               ))}
                             </div>
@@ -412,13 +405,13 @@ const Tier = () => {
                         )}
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      {tier.id > currentTier && (
+                    {tier.id > currentTier && (
+                      <div className="absolute top-4 right-4">
                         <button className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
                           Upgrade
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               ))}

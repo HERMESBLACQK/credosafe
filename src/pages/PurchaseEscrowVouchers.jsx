@@ -19,15 +19,17 @@ import {
   Clock
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
-import apiService from '../api';
+import apiService from '../api/index';
 import { useDispatch } from 'react-redux';
 import { showToast } from '../store/slices/toastSlice';
+import { useLoading } from '../contexts/LoadingContext';
 
 const PurchaseEscrowVouchers = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [showBalance, setShowBalance] = useState(true);
   const [userBalance, setUserBalance] = useState(0);
+  const { startLoading, stopLoading, isLoading: checkLoading } = useLoading();
   const [formData, setFormData] = useState({
     itemTitle: '',
     sellerName: '',
@@ -86,7 +88,18 @@ const PurchaseEscrowVouchers = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Check if user has sufficient balance
+    const totalAmount = calculateTotal() + 500; // Item value + fixed fee
+    if (userBalance < totalAmount) {
+      dispatch(showToast({
+        message: `Insufficient balance. You need ₦${totalAmount.toLocaleString()} but have ₦${userBalance.toLocaleString()}`,
+        type: 'error'
+      }));
+      return;
+    }
+    
     try {
+      startLoading('create-escrow', 'Creating escrow voucher...');
       const voucherData = {
         itemTitle: formData.itemTitle,
         sellerName: formData.sellerName,
@@ -127,6 +140,8 @@ const PurchaseEscrowVouchers = () => {
         message: 'Failed to create voucher',
         type: 'error'
       }));
+    } finally {
+      stopLoading('create-escrow');
     }
   };
 
@@ -390,10 +405,20 @@ const PurchaseEscrowVouchers = () => {
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-6 rounded-lg hover:opacity-90 transition-opacity font-semibold flex items-center justify-center space-x-2"
+                    disabled={checkLoading('create-escrow')}
+                    className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-6 rounded-lg hover:opacity-90 transition-opacity font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
-                    <Lock className="w-5 h-5" />
-                    <span>Create Escrow Voucher</span>
+                    {checkLoading('create-escrow') ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Creating Escrow Voucher...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-5 h-5" />
+                        <span>Create Escrow Voucher</span>
+                      </>
+                    )}
                   </button>
                 </form>
               </div>
@@ -407,7 +432,7 @@ const PurchaseEscrowVouchers = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-neutral-600">Item Value:</span>
-                    <span className="font-medium">${parseFloat(formData.itemValue) || 0}</span>
+                    <span className="font-medium">₦{parseFloat(formData.itemValue) || 0}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-neutral-600">Fixed Fee:</span>

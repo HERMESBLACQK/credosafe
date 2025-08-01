@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { 
   Shield, 
   User, 
@@ -15,15 +15,16 @@ import {
   Save,
   X
 } from 'lucide-react';
-import { apiService } from '../api';
+import apiService from '../api/index';
 import { updateUser } from '../store/slices/authSlice';
 import { showToast } from '../store/slices/uiSlice';
 import FloatingFooter from '../components/FloatingFooter';
+import { useUser } from '../hooks/useUser';
 
 const Profile = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
+  const { user, userProfile, isUserLoaded, isLoading } = useUser();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -35,16 +36,13 @@ const Profile = () => {
 
   // User profile data from Redux store
   const [profileData, setProfileData] = useState({
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    location: user?.location || '',
-    joinDate: user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long'
-    }) : '',
-    avatarUrl: user?.avatarUrl || ''
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    location: '',
+    joinDate: '',
+    avatarUrl: ''
   });
 
   // File input ref for image upload
@@ -52,21 +50,26 @@ const Profile = () => {
 
   // Update profile data when user changes
   useEffect(() => {
-    if (user) {
-      setProfileData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        location: user.location || '',
-        joinDate: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long'
-        }) : '',
-        avatarUrl: user.avatarUrl || ''
-      });
+    console.log('👤 Profile component - user data:', user);
+    console.log('👤 Profile component - userProfile:', userProfile);
+    console.log('👤 Profile component - isUserLoaded:', isUserLoaded);
+    
+    if (isUserLoaded && userProfile) {
+      const newProfileData = {
+        firstName: userProfile.firstName,
+        lastName: userProfile.lastName,
+        email: userProfile.email,
+        phone: userProfile.phone,
+        location: userProfile.location,
+        joinDate: userProfile.joinDate,
+        avatarUrl: userProfile.avatarUrl
+      };
+      console.log('📝 Setting profile data:', newProfileData);
+      setProfileData(newProfileData);
+    } else {
+      console.log('⚠️ No user data available');
     }
-  }, [user]);
+  }, [userProfile, isUserLoaded]);
 
   const handleProfileChange = (field, value) => {
     setProfileData(prev => ({
@@ -127,20 +130,20 @@ const Profile = () => {
       
       if (response.success) {
         // Update user in Redux store with the returned user data
-        dispatch(updateUser(response.data.data.user));
+        dispatch(updateUser(response.data.user));
         
         // Update local profile data with the new user data
         setProfileData({
-          firstName: response.data.data.user.firstName || '',
-          lastName: response.data.data.user.lastName || '',
-          email: response.data.data.user.email || '',
-          phone: response.data.data.user.phone || '',
-          location: response.data.data.user.location || '',
-          joinDate: response.data.data.user.createdAt ? new Date(response.data.data.user.createdAt).toLocaleDateString('en-US', {
+          firstName: response.data.user.firstName || '',
+          lastName: response.data.user.lastName || '',
+          email: response.data.user.email || '',
+          phone: response.data.user.phone || '',
+          location: response.data.user.location || '',
+          joinDate: response.data.user.createdAt ? new Date(response.data.user.createdAt).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long'
           }) : '',
-          avatarUrl: response.data.data.user.avatarUrl || ''
+          avatarUrl: response.data.user.avatarUrl || ''
         });
         
         dispatch(showToast({
@@ -148,7 +151,7 @@ const Profile = () => {
           type: 'success'
         }));
         
-        setIsEditing(false);
+    setIsEditing(false);
       } else {
         dispatch(showToast({
           message: response.error || 'Failed to update profile',
@@ -187,20 +190,26 @@ const Profile = () => {
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <motion.div
-          variants={fadeInUp}
-          initial="initial"
-          animate="animate"
-        >
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-neutral-900 mb-2">Profile</h1>
-            <p className="text-neutral-600">Manage your account information</p>
+        {isLoading || !isUserLoaded ? (
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-neutral-600 font-medium">Loading your profile...</p>
           </div>
+        ) : (
+          <motion.div
+            variants={fadeInUp}
+            initial="initial"
+            animate="animate"
+          >
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-neutral-900 mb-2">Profile</h1>
+              <p className="text-neutral-600">Manage your account information</p>
+            </div>
 
           {/* Profile Header */}
           <div className="bg-white rounded-2xl shadow-soft p-8 mb-6">
             <div className="flex flex-col items-center">
-                             <div className="relative mb-6">
+              <div className="relative mb-6">
                  {profileData.avatarUrl ? (
                    <img 
                      src={profileData.avatarUrl} 
@@ -208,17 +217,17 @@ const Profile = () => {
                      className="w-24 h-24 rounded-full object-cover"
                    />
                  ) : (
-                   <div className="w-24 h-24 bg-gradient-to-r from-primary-500 to-accent-600 rounded-full flex items-center justify-center">
-                     <User className="w-12 h-12 text-white" />
-                   </div>
+                <div className="w-24 h-24 bg-gradient-to-r from-primary-500 to-accent-600 rounded-full flex items-center justify-center">
+                  <User className="w-12 h-12 text-white" />
+                </div>
                  )}
                  {isEditing && (
                    <button 
                      onClick={() => fileInputRef.current?.click()}
                      className="absolute bottom-0 right-0 w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center hover:bg-primary-700 transition-colors"
                    >
-                     <Camera className="w-4 h-4 text-white" />
-                   </button>
+                  <Camera className="w-4 h-4 text-white" />
+                </button>
                  )}
                  <input
                    ref={fileInputRef}
@@ -227,7 +236,7 @@ const Profile = () => {
                    onChange={handleImageUpload}
                    className="hidden"
                  />
-               </div>
+              </div>
               <h2 className="text-2xl font-bold text-neutral-900 mb-2">
                 {profileData.firstName} {profileData.lastName}
               </h2>
@@ -278,7 +287,7 @@ const Profile = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-neutral-600">Full Name</p>
-                    <p className="font-medium text-neutral-900">{profileData.firstName} {profileData.lastName}</p>
+                      <p className="font-medium text-neutral-900">{profileData.firstName} {profileData.lastName}</p>
                     <p className="text-xs text-neutral-500 mt-1">Name cannot be changed</p>
                   </div>
                 </div>
@@ -291,7 +300,7 @@ const Profile = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-neutral-600">Email Address</p>
-                    <p className="font-medium text-neutral-900">{profileData.email}</p>
+                      <p className="font-medium text-neutral-900">{profileData.email}</p>
                     <p className="text-xs text-neutral-500 mt-1">Email cannot be changed</p>
                   </div>
                 </div>
@@ -357,6 +366,7 @@ const Profile = () => {
             </div>
           </div>
         </motion.div>
+        )}
       </div>
       
       {/* Floating Footer Navigation */}

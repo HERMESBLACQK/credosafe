@@ -12,7 +12,7 @@ import {
   AlertCircle,
   Key
 } from 'lucide-react';
-import { apiService } from '../api';
+import apiService from '../api/index';
 import { showToast } from '../store/slices/uiSlice';
 import OTPModal from '../components/OTPModal';
 import FloatingFooter from '../components/FloatingFooter';

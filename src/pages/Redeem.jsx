@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import apiService from '../api';
+import apiService from '../api/index';
 import { 
   Shield, 
   CreditCard, 
@@ -16,13 +16,20 @@ import {
   FileText
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
+import { useLoading } from '../contexts/LoadingContext';
+import QRCodeScanner from '../components/QRCodeScanner';
+import { useDispatch } from 'react-redux';
+import { showToast } from '../store/slices/toastSlice';
 
 const Redeem = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [redeemMethod, setRedeemMethod] = useState('code');
   const [voucherCode, setVoucherCode] = useState('');
   const [uploadedFile, setUploadedFile] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const { startLoading, stopLoading } = useLoading();
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -35,6 +42,7 @@ const Redeem = () => {
     if (!voucherCode.trim()) return;
 
     setIsProcessing(true);
+    startLoading('redeem-code', 'Searching for voucher...');
     try {
       console.log('🔍 Searching for voucher with code:', voucherCode);
       const response = await apiService.vouchers.searchByCode(voucherCode);
@@ -43,10 +51,22 @@ const Redeem = () => {
       console.log('📡 Response success:', response.success);
       console.log('📡 Response message:', response.message);
       console.log('📡 Response data:', response.data);
+      console.log('📡 Response data type:', typeof response.data);
+      console.log('📡 Response data keys:', response.data ? Object.keys(response.data) : 'No data');
+      console.log('📡 Voucher ID:', response.data?.id);
       
       if (response.success && response.data) {
         console.log('✅ Voucher found:', response.data);
-        navigate('/redeem-voucher', { 
+        console.log('🔍 Navigating to:', `/redeem-voucher/${response.data.id}`);
+        console.log('🔍 Navigation state:', { 
+          voucherData: response.data,
+          method: 'code',
+          voucherCode: voucherCode
+        });
+        // Try navigation with ID first, fallback to without ID
+        const targetPath = response.data.id ? `/redeem-voucher/${response.data.id}` : '/redeem-voucher';
+        console.log('🔍 Final navigation path:', targetPath);
+        navigate(targetPath, { 
           state: { 
             voucherData: response.data,
             method: 'code',
@@ -55,13 +75,20 @@ const Redeem = () => {
         });
       } else {
         console.error('❌ Voucher not found or error:', response.message);
-        alert('Voucher not found. Please check the code and try again.');
+        dispatch(showToast({
+          message: 'Voucher not found. Please check the code and try again.',
+          type: 'error'
+        }));
       }
     } catch (error) {
       console.error('❌ Error searching for voucher:', error);
-      alert('Error searching for voucher. Please try again.');
+      dispatch(showToast({
+        message: 'Error searching for voucher. Please try again.',
+        type: 'error'
+      }));
     } finally {
       setIsProcessing(false);
+      stopLoading('redeem-code');
     }
   };
 
@@ -70,6 +97,7 @@ const Redeem = () => {
     if (file) {
       setUploadedFile(file);
       setIsProcessing(true);
+      startLoading('redeem-upload', 'Processing uploaded file...');
       
       try {
         console.log('🔍 Processing uploaded file:', file.name);
@@ -85,7 +113,8 @@ const Redeem = () => {
         
         if (response.success && response.data) {
           console.log('✅ Voucher found from file:', response.data);
-          navigate('/redeem-voucher', { 
+          const targetPath = response.data.id ? `/redeem-voucher/${response.data.id}` : '/redeem-voucher';
+          navigate(targetPath, { 
             state: { 
               voucherData: response.data,
               method: 'upload',
@@ -94,24 +123,34 @@ const Redeem = () => {
           });
         } else {
           console.error('❌ Voucher not found from file:', response.message);
-          alert('Voucher not found in uploaded file. Please check the file and try again.');
+          dispatch(showToast({
+            message: 'Voucher not found in uploaded file. Please check the file and try again.',
+            type: 'error'
+          }));
         }
       } catch (error) {
         console.error('❌ Error processing uploaded file:', error);
-        alert('Error processing uploaded file. Please try again.');
+        dispatch(showToast({
+          message: 'Error processing uploaded file. Please try again.',
+          type: 'error'
+        }));
       } finally {
         setIsProcessing(false);
+        stopLoading('redeem-upload');
       }
     }
   };
 
-  const handleQRScan = async () => {
+  const handleQRScan = () => {
+    setShowQRScanner(true);
+  };
+
+  const handleQRCodeScanned = async (scannedCode) => {
+    setShowQRScanner(false);
     setIsProcessing(true);
+    startLoading('redeem-qr', 'Processing scanned QR code...');
     
     try {
-      // For now, we'll simulate QR scanning with a demo code
-      // In a real implementation, this would use a QR scanner library
-      const scannedCode = 'QR-SCANNED-CODE-123';
       console.log('🔍 QR Code scanned:', scannedCode);
       
       const response = await apiService.vouchers.searchByCode(scannedCode);
@@ -123,7 +162,8 @@ const Redeem = () => {
       
       if (response.success && response.data) {
         console.log('✅ Voucher found from QR scan:', response.data);
-        navigate('/redeem-voucher', { 
+        const targetPath = response.data.id ? `/redeem-voucher/${response.data.id}` : '/redeem-voucher';
+        navigate(targetPath, { 
           state: { 
             voucherData: response.data,
             method: 'qr',
@@ -132,14 +172,30 @@ const Redeem = () => {
         });
       } else {
         console.error('❌ Voucher not found from QR scan:', response.message);
-        alert('Voucher not found. Please check the QR code and try again.');
+        dispatch(showToast({
+          message: 'Voucher not found. Please check the QR code and try again.',
+          type: 'error'
+        }));
       }
     } catch (error) {
       console.error('❌ Error processing QR scan:', error);
-      alert('Error processing QR scan. Please try again.');
+      dispatch(showToast({
+        message: 'Error processing QR scan. Please try again.',
+        type: 'error'
+      }));
     } finally {
       setIsProcessing(false);
+      stopLoading('redeem-qr');
     }
+  };
+
+  const handleQRScannerError = (error) => {
+    console.error('QR Scanner error:', error);
+    setShowQRScanner(false);
+  };
+
+  const handleQRScannerClose = () => {
+    setShowQRScanner(false);
   };
 
   return (
@@ -273,7 +329,7 @@ const Redeem = () => {
                   {isProcessing ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Scanning...</span>
+                      <span>Processing...</span>
                     </>
                   ) : (
                     <>
@@ -357,6 +413,15 @@ const Redeem = () => {
       
       {/* Floating Footer Navigation */}
       <FloatingFooter />
+
+      {/* QR Code Scanner Modal */}
+      {showQRScanner && (
+        <QRCodeScanner
+          onScan={handleQRCodeScanned}
+          onClose={handleQRScannerClose}
+          onError={handleQRScannerError}
+        />
+      )}
     </div>
   );
 };

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
-import apiService from '../api';
+import apiService from '../api/index';
 import { 
   Shield, 
   ArrowLeft,
@@ -385,7 +385,7 @@ const RedeemVoucher = () => {
     }
   };
 
-  const handleResendOTP = async (email) => {
+  const handleResendOTP = async () => {
     return handleRequestOTP();
   };
 

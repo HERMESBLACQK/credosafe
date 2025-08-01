@@ -13,7 +13,7 @@ import {
   Trash2
 } from 'lucide-react';
 
-import { apiService } from '../api';
+import apiService from '../api/index';
 import FloatingFooter from '../components/FloatingFooter';
 
 const DeviceManagement = () => {

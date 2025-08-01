@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import apiService from '../api';
+import { useSelector, useDispatch } from 'react-redux';
+import apiService from '../api/index';
+import { showToast } from '../store/slices/toastSlice';
 import { 
   Shield, 
   ArrowLeft,
@@ -19,10 +20,12 @@ import {
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
 
+
 const VoucherPreview = () => {
-  const { voucherId } = useParams();
+  const { id: voucherId } = useParams();
   const navigate = useNavigate();
-  const { vouchers } = useSelector((state) => state.vouchers);
+  const dispatch = useDispatch();
+  const { vouchers = [] } = useSelector((state) => state.vouchers);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
   const [themes, setThemes] = useState({});
   const [loadingThemes, setLoadingThemes] = useState(false);
@@ -32,14 +35,15 @@ const VoucherPreview = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
 
+
   useEffect(() => {
     console.log('🔍 VoucherPreview useEffect triggered');
     console.log('🔍 voucherId from params:', voucherId);
     console.log('🔍 vouchers from Redux:', vouchers);
     console.log('🔍 vouchers length:', vouchers?.length);
     
-    // Find the voucher by ID
-    const voucher = vouchers.find(v => v.id === parseInt(voucherId));
+    // Find the voucher by ID (voucherId is a UUID string, not integer)
+    const voucher = vouchers.find(v => v.id === voucherId);
     console.log('🔍 Found voucher in Redux:', voucher);
     
     if (voucher) {
@@ -95,6 +99,12 @@ const VoucherPreview = () => {
 
   const fetchVoucherFromAPI = async () => {
     try {
+      if (!voucherId) {
+        console.error('❌ No voucher ID provided');
+        navigate('/transactions');
+        return;
+      }
+      
       console.log('🔍 Fetching voucher from API with ID:', voucherId);
       const response = await apiService.vouchers.getById(voucherId);
       
@@ -290,7 +300,10 @@ const VoucherPreview = () => {
       
       if (response.success) {
         console.log('✅ Milestone released successfully');
-        alert(`Milestone "${response.data.milestoneName}" released successfully! Amount: ${formatCurrency(response.data.amount)}`);
+        dispatch(showToast({
+          message: `Milestone "${response.data.milestoneName}" released successfully! Amount: ${formatCurrency(response.data.amount)}`,
+          type: 'success'
+        }));
         
         // Refresh the voucher data
         if (selectedVoucher.voucherData.id) {
@@ -304,11 +317,17 @@ const VoucherPreview = () => {
         }
       } else {
         console.error('❌ Failed to release milestone:', response.message);
-        alert(`Failed to release milestone: ${response.message}`);
+        dispatch(showToast({
+          message: `Failed to release milestone: ${response.message}`,
+          type: 'error'
+        }));
       }
     } catch (error) {
       console.error('❌ Error releasing milestone:', error);
-      alert('Error releasing milestone. Please try again.');
+      dispatch(showToast({
+        message: 'Error releasing milestone. Please try again.',
+        type: 'error'
+      }));
     } finally {
       setIsReleasingMilestone(false);
     }
@@ -326,7 +345,10 @@ const VoucherPreview = () => {
       
       if (response.success) {
         console.log('✅ Voucher activated successfully');
-        alert('Voucher activated successfully!');
+        dispatch(showToast({
+          message: 'Voucher activated successfully!',
+          type: 'success'
+        }));
         
         // Refresh the voucher data
         if (selectedVoucher.voucherData.id) {
@@ -340,11 +362,17 @@ const VoucherPreview = () => {
         }
       } else {
         console.error('❌ Failed to activate voucher:', response.message);
-        alert(`Failed to activate voucher: ${response.message}`);
+        dispatch(showToast({
+          message: `Failed to activate voucher: ${response.message}`,
+          type: 'error'
+        }));
       }
     } catch (error) {
       console.error('❌ Error activating voucher:', error);
-      alert('Error activating voucher. Please try again.');
+      dispatch(showToast({
+        message: 'Error activating voucher. Please try again.',
+        type: 'error'
+      }));
     } finally {
       setIsActivatingVoucher(false);
     }
@@ -362,7 +390,10 @@ const VoucherPreview = () => {
       
       if (response.success) {
         console.log('✅ Voucher cancellation initiated successfully');
-        alert('Voucher cancellation initiated successfully! Recipient has been notified.');
+        dispatch(showToast({
+          message: 'Voucher cancellation initiated successfully! Recipient has been notified.',
+          type: 'success'
+        }));
         setShowCancelModal(false);
         setCancelReason('');
         
@@ -378,11 +409,17 @@ const VoucherPreview = () => {
         }
       } else {
         console.error('❌ Failed to cancel voucher:', response.message);
-        alert(`Failed to cancel voucher: ${response.message}`);
+        dispatch(showToast({
+          message: `Failed to cancel voucher: ${response.message}`,
+          type: 'error'
+        }));
       }
     } catch (error) {
       console.error('❌ Error cancelling voucher:', error);
-      alert('Error cancelling voucher. Please try again.');
+      dispatch(showToast({
+        message: 'Error cancelling voucher. Please try again.',
+        type: 'error'
+      }));
     } finally {
       setIsCancellingVoucher(false);
     }
@@ -405,7 +442,10 @@ const VoucherPreview = () => {
       
       if (response.success) {
         console.log('✅ Dispute resolved successfully');
-        alert('Dispute resolved successfully! Voucher is now available for redemption.');
+        dispatch(showToast({
+          message: 'Dispute resolved successfully! Voucher is now available for redemption.',
+          type: 'success'
+        }));
         
         // Refresh the voucher data
         if (selectedVoucher.voucherData.id) {
@@ -419,11 +459,17 @@ const VoucherPreview = () => {
         }
       } else {
         console.error('❌ Failed to resolve dispute:', response.message);
-        alert(`Failed to resolve dispute: ${response.message}`);
+        dispatch(showToast({
+          message: `Failed to resolve dispute: ${response.message}`,
+          type: 'error'
+        }));
       }
     } catch (error) {
       console.error('❌ Error resolving dispute:', error);
-      alert('Error resolving dispute. Please try again.');
+      dispatch(showToast({
+        message: 'Error resolving dispute. Please try again.',
+        type: 'error'
+      }));
     }
   };
 

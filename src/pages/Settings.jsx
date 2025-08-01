@@ -20,22 +20,23 @@ import {
 } from 'lucide-react';
 import { logoutUser, updateUser } from '../store/slices/authSlice';
 import { showToast } from '../store/slices/uiSlice';
-import { apiService, apiUtils } from '../api';
+import apiService from '../api/index';
 import FloatingFooter from '../components/FloatingFooter';
+import { useUser } from '../hooks/useUser';
 
 const Settings = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
+  const { user, userProfile, isUserLoaded, isLoading } = useUser();
   
   const [notifications, setNotifications] = useState({
-    pushNotifications: user?.pushNotifications ?? true,
-    emailAlerts: user?.emailAlerts ?? true,
-    transactionNotifications: user?.transactionNotifications ?? true,
-    emailPreferences: user?.emailPreferences ?? true
+    pushNotifications: userProfile.settings.pushNotifications,
+    emailAlerts: userProfile.settings.emailAlerts,
+    transactionNotifications: userProfile.settings.transactionNotifications,
+    emailPreferences: userProfile.settings.emailPreferences
   });
   const [security, setSecurity] = useState({
-    twoFactorAuth: user?.twoFactorAuth ?? true
+    twoFactorAuth: userProfile.settings.twoFactorAuth
   });
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -61,14 +62,14 @@ const Settings = () => {
 
       if (response.success) {
         // Update user in Redux store with the returned user data
-        dispatch(updateUser(response.data.data.user));
+        dispatch(updateUser(response.data.user));
         
         // Update local settings with the new user data
         setNotifications({
-          pushNotifications: response.data.data.user.pushNotifications ?? true,
-          emailAlerts: response.data.data.user.emailAlerts ?? true,
-          transactionNotifications: response.data.data.user.transactionNotifications ?? true,
-          emailPreferences: response.data.data.user.emailPreferences ?? true
+          pushNotifications: response.data.user.pushNotifications ?? true,
+          emailAlerts: response.data.user.emailAlerts ?? true,
+          transactionNotifications: response.data.user.transactionNotifications ?? true,
+          emailPreferences: response.data.user.emailPreferences ?? true
         });
         
         dispatch(showToast({
@@ -115,11 +116,11 @@ const Settings = () => {
 
       if (response.success) {
         // Update user in Redux store with the returned user data
-        dispatch(updateUser(response.data.data.user));
+        dispatch(updateUser(response.data.user));
         
         // Update local settings with the new user data
         setSecurity({
-          twoFactorAuth: response.data.data.user.twoFactorAuth ?? true
+          twoFactorAuth: response.data.user.twoFactorAuth ?? true
         });
         
         dispatch(showToast({
@@ -154,6 +155,9 @@ const Settings = () => {
   // Fetch user devices
   const fetchDevices = async () => {
     try {
+      console.log('🔍 Fetching devices...');
+      console.log('🔑 Auth token:', localStorage.getItem('token') ? 'Present' : 'Missing');
+      
       const response = await apiService.auth.getDevices();
       console.log('📱 Devices response:', response);
       
@@ -168,6 +172,11 @@ const Settings = () => {
       }
     } catch (error) {
       console.error('Error fetching devices:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       setDevices([]);
     }
   };
@@ -198,18 +207,19 @@ const Settings = () => {
 
   // Update settings when user data changes
   useEffect(() => {
-    if (user) {
+    if (isUserLoaded && userProfile) {
+      console.log('⚙️ Settings: Updating settings from user data');
       setNotifications({
-        pushNotifications: user.pushNotifications ?? true,
-        emailAlerts: user.emailAlerts ?? true,
-        transactionNotifications: user.transactionNotifications ?? true,
-        emailPreferences: user.emailPreferences ?? true
+        pushNotifications: userProfile.settings.pushNotifications,
+        emailAlerts: userProfile.settings.emailAlerts,
+        transactionNotifications: userProfile.settings.transactionNotifications,
+        emailPreferences: userProfile.settings.emailPreferences
       });
       setSecurity({
-        twoFactorAuth: user.twoFactorAuth ?? true
+        twoFactorAuth: userProfile.settings.twoFactorAuth
       });
     }
-  }, [user]);
+  }, [userProfile, isUserLoaded]);
 
   // Fetch devices on component mount
   useEffect(() => {

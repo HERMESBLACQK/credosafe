@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, ArrowLeft, Eye, Download, Share2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import apiService from '../api';
+import apiService from '../api/index';
 import { useDispatch } from 'react-redux';
 import { showToast } from '../store/slices/toastSlice';
 

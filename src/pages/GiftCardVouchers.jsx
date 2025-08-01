@@ -20,9 +20,10 @@ import {
   CheckCircle
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
-import apiService from '../api';
+import apiService from '../api/index';
 import { useDispatch } from 'react-redux';
 import { showToast } from '../store/slices/toastSlice';
+import { useLoading } from '../contexts/LoadingContext';
 
 const GiftCardVouchers = () => {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ const GiftCardVouchers = () => {
   const [userBalance, setUserBalance] = useState(0);
   const [selectedDesign, setSelectedDesign] = useState('birthday');
   const [themes, setThemes] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const { startLoading, stopLoading, isLoading: checkLoading } = useLoading();
   const [formData, setFormData] = useState({
     giftAmount: '',
     recipientName: '',
@@ -48,13 +49,18 @@ const GiftCardVouchers = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
+        startLoading('fetch-data', 'Loading data...');
         
         // Fetch balance
+        console.log('🔄 Fetching balance...');
         const balanceResponse = await apiService.vouchers.getBalance();
+        console.log('📡 Balance response:', balanceResponse);
+        
         if (balanceResponse.success) {
           setUserBalance(balanceResponse.data?.balance || 0);
+          console.log('✅ Balance set to:', balanceResponse.data?.balance || 0);
         } else {
+          console.error('❌ Balance fetch failed:', balanceResponse.message);
           dispatch(showToast({
             message: balanceResponse.message || 'Failed to fetch balance',
             type: 'error'
@@ -75,13 +81,14 @@ const GiftCardVouchers = () => {
           console.error('Failed to fetch themes:', themesResponse.message);
         }
       } catch (error) {
-        console.error('Data fetch error:', error);
+        console.error('❌ Data fetch error:', error);
+        console.error('❌ Error details:', error.message);
         dispatch(showToast({
-          message: 'Failed to fetch data',
+          message: `Failed to fetch data: ${error.message}`,
           type: 'error'
         }));
       } finally {
-        setLoading(false);
+        stopLoading('fetch-data');
       }
     };
     fetchData();
@@ -125,7 +132,18 @@ const GiftCardVouchers = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Check if user has sufficient balance
+    const giftAmount = parseFloat(formData.giftAmount) || 0;
+    if (userBalance < giftAmount) {
+      dispatch(showToast({
+        message: `Insufficient balance. You need ₦${giftAmount.toLocaleString()} but have ₦${userBalance.toLocaleString()}`,
+        type: 'error'
+      }));
+      return;
+    }
+    
     try {
+      startLoading('create-gift-card', 'Creating your gift card...');
       const voucherData = {
         giftAmount: parseFloat(formData.giftAmount),
         recipientName: formData.recipientName,
@@ -165,6 +183,8 @@ const GiftCardVouchers = () => {
         message: 'Failed to create voucher',
         type: 'error'
       }));
+    } finally {
+      stopLoading('create-gift-card');
     }
   };
 
@@ -274,7 +294,7 @@ const GiftCardVouchers = () => {
                             onClick={() => handleInputChange('giftAmount', amount.toString())}
                             className="px-3 py-2 border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors text-sm"
                           >
-                            ${amount}
+                            ₦{amount}
                           </button>
                         ))}
                       </div>
@@ -421,10 +441,20 @@ const GiftCardVouchers = () => {
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-pink-500 to-pink-600 text-white py-3 px-6 rounded-lg hover:opacity-90 transition-opacity font-semibold flex items-center justify-center space-x-2"
+                    disabled={checkLoading('create-gift-card')}
+                    className="w-full bg-gradient-to-r from-pink-500 to-pink-600 text-white py-3 px-6 rounded-lg hover:opacity-90 transition-opacity font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
-                    <Gift className="w-5 h-5" />
-                    <span>Create Gift Card</span>
+                    {checkLoading('create-gift-card') ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Creating Gift Card...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Gift className="w-5 h-5" />
+                        <span>Create Gift Card</span>
+                      </>
+                    )}
                   </button>
                 </form>
               </div>
@@ -435,23 +465,23 @@ const GiftCardVouchers = () => {
               {/* Design Selection */}
               <div className="bg-white rounded-2xl shadow-soft p-6">
                 <h2 className="text-xl font-bold text-neutral-900 mb-4">Choose Design</h2>
-                {loading ? (
+                {checkLoading('fetch-data') ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600 mx-auto"></div>
                     <p className="text-neutral-600 mt-2">Loading themes...</p>
                   </div>
                                  ) : themes && themes.length > 0 ? (
-                   <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                      {themes.map((theme) => (
-                      <button
+                    <button
                         key={theme.id}
                         onClick={() => setSelectedDesign(theme.name)}
-                        className={`p-4 border-2 rounded-lg text-left transition-colors ${
+                      className={`p-4 border-2 rounded-lg text-left transition-colors ${
                           selectedDesign === theme.name
-                            ? 'border-pink-600 bg-pink-50'
-                            : 'border-neutral-300 hover:border-neutral-400'
-                        }`}
-                      >
+                          ? 'border-pink-600 bg-pink-50'
+                          : 'border-neutral-300 hover:border-neutral-400'
+                      }`}
+                    >
                         <div className={`w-12 h-12 bg-gradient-to-r ${theme.gradient_colors} rounded-lg flex items-center justify-center mb-3`}>
                           <div className="text-white text-xl">
                             {theme.icon_emoji}
@@ -459,9 +489,9 @@ const GiftCardVouchers = () => {
                         </div>
                         <h3 className="font-medium text-neutral-900 mb-1">{theme.display_name}</h3>
                         <p className="text-sm text-neutral-600">{theme.description}</p>
-                                             </button>
-                     ))}
-                   </div>
+                    </button>
+                  ))}
+                </div>
                  ) : (
                    <div className="text-center py-8">
                      <p className="text-neutral-600">No themes available</p>
@@ -484,51 +514,51 @@ const GiftCardVouchers = () => {
                   </div>
                 </div>
 
-                                 {/* Gift Card Design */}
+                {/* Gift Card Design */}
                  <div className={`border-2 border-neutral-200 rounded-lg p-6 bg-gradient-to-br ${selectedDesignData?.gradient_colors} text-white`}>
-                   <div className="text-center mb-6">
-                     <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
                        <div className="text-white text-2xl">
                          {selectedDesignData?.icon_emoji}
-                       </div>
-                     </div>
-                     <h3 className="text-2xl font-bold mb-2">Gift Card</h3>
-                     <p className="text-white/80">CredoSafe Digital Gift</p>
-                   </div>
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-bold mb-2">Gift Card</h3>
+                    <p className="text-white/80">CredoSafe Digital Gift</p>
+                  </div>
 
-                   <div className="space-y-4">
-                     <div className="bg-white/20 rounded-lg p-4 text-center">
-                       <p className="text-white/80 mb-1">Gift Amount</p>
-                       <p className="text-3xl font-bold">
+                  <div className="space-y-4">
+                    <div className="bg-white/20 rounded-lg p-4 text-center">
+                      <p className="text-white/80 mb-1">Gift Amount</p>
+                      <p className="text-3xl font-bold">
                          ₦{parseFloat(formData.giftAmount) || 0}
-                       </p>
-                     </div>
+                      </p>
+                    </div>
 
-                     <div className="border-t border-white/20 pt-4">
-                       <h4 className="font-semibold mb-2">To:</h4>
-                       <p className="font-medium">{formData.recipientName || 'Recipient Name'}</p>
-                     </div>
+                    <div className="border-t border-white/20 pt-4">
+                      <h4 className="font-semibold mb-2">To:</h4>
+                      <p className="font-medium">{formData.recipientName || 'Recipient Name'}</p>
+                    </div>
 
-                     {!formData.isAnonymous && formData.senderName && (
-                       <div>
-                         <h4 className="font-semibold mb-2">From:</h4>
-                         <p className="font-medium">{formData.senderName}</p>
-                       </div>
-                     )}
+                    {!formData.isAnonymous && formData.senderName && (
+                      <div>
+                        <h4 className="font-semibold mb-2">From:</h4>
+                        <p className="font-medium">{formData.senderName}</p>
+                      </div>
+                    )}
 
-                     {formData.message && (
-                       <div className="bg-white/20 rounded-lg p-4">
-                         <p className="text-sm text-white/80 mb-1">Message:</p>
-                         <p className="italic">"{formData.message}"</p>
-                       </div>
-                     )}
+                    {formData.message && (
+                      <div className="bg-white/20 rounded-lg p-4">
+                        <p className="text-sm text-white/80 mb-1">Message:</p>
+                        <p className="italic">"{formData.message}"</p>
+                      </div>
+                    )}
 
-                     <div className="border-t border-white/20 pt-4">
-                       <p className="text-xs text-white/60">Gift Card ID: GC-{Date.now().toString().slice(-8)}</p>
-                       <p className="text-xs text-white/60">Created: {new Date().toLocaleDateString()}</p>
-                     </div>
-                   </div>
-                 </div>
+                    <div className="border-t border-white/20 pt-4">
+                      <p className="text-xs text-white/60">Gift Card ID: GC-{Date.now().toString().slice(-8)}</p>
+                      <p className="text-xs text-white/60">Created: {new Date().toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Features */}

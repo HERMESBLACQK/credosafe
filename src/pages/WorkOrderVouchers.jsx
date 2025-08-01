@@ -18,9 +18,10 @@ import {
   EyeOff
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
-import apiService from '../api';
+import apiService from '../api/index';
 import { useDispatch } from 'react-redux';
 import { showToast } from '../store/slices/toastSlice';
+import { useLoading } from '../contexts/LoadingContext';
 
 const WorkOrderVouchers = () => {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ const WorkOrderVouchers = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [userBalance, setUserBalance] = useState(0);
   const [themes, setThemes] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const { startLoading, stopLoading, isLoading: checkLoading } = useLoading();
   const [formData, setFormData] = useState({
     projectTitle: '',
     clientName: '',
@@ -47,13 +48,18 @@ const WorkOrderVouchers = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
+        startLoading('fetch-data', 'Loading data...');
         
         // Fetch balance
+        console.log('🔄 Fetching balance...');
         const balanceResponse = await apiService.vouchers.getBalance();
+        console.log('📡 Balance response:', balanceResponse);
+        
         if (balanceResponse.success) {
           setUserBalance(balanceResponse.data?.balance || 0);
+          console.log('✅ Balance set to:', balanceResponse.data?.balance || 0);
         } else {
+          console.error('❌ Balance fetch failed:', balanceResponse.message);
           dispatch(showToast({
             message: balanceResponse.message || 'Failed to fetch balance',
             type: 'error'
@@ -74,13 +80,14 @@ const WorkOrderVouchers = () => {
           console.error('Failed to fetch themes:', themesResponse.message);
         }
       } catch (error) {
-        console.error('Data fetch error:', error);
+        console.error('❌ Data fetch error:', error);
+        console.error('❌ Error details:', error.message);
         dispatch(showToast({
-          message: 'Failed to fetch data',
+          message: `Failed to fetch data: ${error.message}`,
           type: 'error'
         }));
       } finally {
-        setLoading(false);
+        stopLoading('fetch-data');
       }
     };
     fetchData();
@@ -149,18 +156,39 @@ const WorkOrderVouchers = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Check if user has sufficient balance
+    const totalAmount = calculateTotal();
+    if (userBalance < totalAmount) {
+      dispatch(showToast({
+        message: `Insufficient balance. You need ₦${totalAmount.toLocaleString()} but have ₦${userBalance.toLocaleString()}`,
+        type: 'error'
+      }));
+      return;
+    }
+    
     try {
+      startLoading('create-work-order', 'Creating work order...');
       // Validate milestones if payment type is milestone
       if (formData.paymentType === 'milestone') {
         const totalPercentage = formData.milestones.reduce((sum, milestone) => {
           return sum + (parseFloat(milestone.percentage) || 0);
         }, 0);
         
-        if (Math.abs(totalPercentage - 100) > 0.01) {
+        if (totalPercentage > 100) {
           dispatch(showToast({
-            message: 'Total milestone percentage must equal 100%',
+            message: `Total milestone percentage cannot exceed 100%. Current total: ${totalPercentage.toFixed(1)}%`,
             type: 'error'
           }));
+          stopLoading('create-work-order');
+          return;
+        }
+        
+        if (totalPercentage < 100) {
+          dispatch(showToast({
+            message: `Total milestone percentage must equal 100%. Current total: ${totalPercentage.toFixed(1)}% (${(100 - totalPercentage).toFixed(1)}% remaining)`,
+            type: 'error'
+          }));
+          stopLoading('create-work-order');
           return;
         }
       }
@@ -204,6 +232,8 @@ const WorkOrderVouchers = () => {
         message: 'Failed to create voucher',
         type: 'error'
       }));
+    } finally {
+      stopLoading('create-work-order');
     }
   };
 
@@ -554,10 +584,20 @@ const WorkOrderVouchers = () => {
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-6 rounded-lg hover:opacity-90 transition-opacity font-semibold flex items-center justify-center space-x-2"
+                    disabled={checkLoading('create-work-order')}
+                    className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-6 rounded-lg hover:opacity-90 transition-opacity font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
-                    <Handshake className="w-5 h-5" />
-                    <span>Create Work Order Voucher</span>
+                    {checkLoading('create-work-order') ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Creating Work Order Voucher...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Handshake className="w-5 h-5" />
+                        <span>Create Work Order Voucher</span>
+                      </>
+                    )}
                   </button>
                 </form>
               </div>
@@ -568,7 +608,7 @@ const WorkOrderVouchers = () => {
               {/* Design Selection */}
               <div className="bg-white rounded-2xl shadow-soft p-6">
                 <h2 className="text-xl font-bold text-neutral-900 mb-4">Voucher Design</h2>
-                {loading ? (
+                {checkLoading('fetch-data') ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
                     <p className="text-neutral-600 mt-2">Loading themes...</p>

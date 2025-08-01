@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { fetchVouchers } from '../store/slices/voucherSlice';
-import apiService from '../api';
+import apiService from '../api/index';
+import { useUser } from '../hooks/useUser';
 import { 
   Shield, 
   ArrowLeft,
@@ -37,8 +38,8 @@ import FloatingFooter from '../components/FloatingFooter';
 const Transactions = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user: _user } = useSelector((state) => state.auth);
-  const { vouchers } = useSelector((state) => state.vouchers);
+  const { user, userProfile, isUserLoaded } = useUser();
+  const { vouchers = [] } = useSelector((state) => state.vouchers);
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
@@ -46,25 +47,24 @@ const Transactions = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [userBalance, setUserBalance] = useState(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
-  const [themes, setThemes] = useState({});
-  const [loadingThemes, setLoadingThemes] = useState(false);
+  const [_themes, setThemes] = useState({});
+  const [_loadingThemes, setLoadingThemes] = useState(false);
 
   useEffect(() => {
     dispatch(fetchVouchers());
 
-    // Fetch user's wallet balance
-    const fetchBalance = async () => {
+    // Use balance from user profile
+    const fetchBalance = () => {
       try {
         setIsLoadingBalance(true);
-        const response = await apiService.vouchers.getBalance();
-        if (response.success) {
-          setUserBalance(response.data?.balance || 0);
+        // Use balance from user profile
+        if (isUserLoaded && userProfile?.wallet?.balance !== undefined) {
+          setUserBalance(userProfile.wallet.balance);
         } else {
-          console.error('Failed to fetch balance:', response.error);
           setUserBalance(0);
         }
       } catch (error) {
-        console.error('Balance fetch error:', error);
+        console.error('Balance error:', error);
         setUserBalance(0);
       } finally {
         setIsLoadingBalance(false);
@@ -79,17 +79,28 @@ const Transactions = () => {
         const themesData = {};
         
         for (const voucherType of voucherTypes) {
-          const response = await apiService.themes.getByVoucherType(voucherType);
-          console.log(`🎨 Fetched themes for ${voucherType}:`, response);
-          if (response.success) {
-            themesData[voucherType] = response.data || [];
+          try {
+            console.log(`🎨 Fetching themes for ${voucherType}...`);
+            const response = await apiService.themes.getByVoucherType(voucherType);
+            console.log(`🎨 Fetched themes for ${voucherType}:`, response);
+            if (response.success) {
+              themesData[voucherType] = response.data || [];
+              console.log(`🎨 ${voucherType} themes count:`, themesData[voucherType].length);
+            } else {
+              console.warn(`⚠️ Failed to fetch themes for ${voucherType}:`, response.message);
+              themesData[voucherType] = [];
+            }
+          } catch (typeError) {
+            console.error(`❌ Error fetching themes for ${voucherType}:`, typeError);
+            themesData[voucherType] = [];
           }
         }
         
         console.log('🎨 All themes data:', themesData);
         setThemes(themesData);
       } catch (error) {
-        console.error('Themes fetch error:', error);
+        console.error('❌ Overall themes fetch error:', error);
+        setThemes({});
       } finally {
         setLoadingThemes(false);
       }
@@ -97,21 +108,45 @@ const Transactions = () => {
 
     fetchBalance();
     fetchThemes();
-  }, [dispatch]);
+  }, [dispatch, user]);
+
+  // Separate useEffect for balance updates when user profile changes
+  useEffect(() => {
+    if (isUserLoaded && userProfile?.wallet?.balance !== undefined) {
+      console.log('🔍 Transactions: Updating balance from userProfile:', userProfile.wallet.balance);
+      setUserBalance(userProfile.wallet.balance);
+    }
+  }, [userProfile?.wallet?.balance, isUserLoaded]);
+
+  // Debug: Log vouchers data
+  useEffect(() => {
+    console.log('🔍 Vouchers data in Transactions:', vouchers);
+    console.log('🔍 Vouchers type:', typeof vouchers);
+    console.log('🔍 Vouchers is array:', Array.isArray(vouchers));
+    if (Array.isArray(vouchers)) {
+      console.log('🔍 Vouchers length:', vouchers.length);
+      console.log('🔍 First voucher:', vouchers[0]);
+    }
+  }, [vouchers]);
 
   // Convert vouchers to transaction format for display
-  const transactions = useMemo(() => vouchers.map(voucher => ({
-    id: voucher.id,
-    type: 'funding',
-    amount: parseFloat(voucher.total_amount),
-    description: `${voucher.type.replace('-', ' ').toUpperCase()} Voucher Created`,
-    date: voucher.created_at,
-    status: voucher.status,
-    reference: voucher.voucher_code,
-    category: voucher.type.replace('-', ' ').toUpperCase(),
-    voucherType: voucher.type,
-    voucherData: voucher
-  })), [vouchers]);
+  const transactions = useMemo(() => {
+    if (!Array.isArray(vouchers)) {
+      return [];
+    }
+    return vouchers.map(voucher => ({
+      id: voucher.id,
+      type: 'funding',
+      amount: parseFloat(voucher.total_amount),
+      description: `${voucher.type.replace('-', ' ').toUpperCase()} Voucher Created`,
+      date: voucher.created_at,
+      status: voucher.status,
+      reference: voucher.voucher_code,
+      category: voucher.type.replace('-', ' ').toUpperCase(),
+      voucherType: voucher.type,
+      voucherData: voucher
+    }));
+  }, [vouchers]);
 
   const [filteredTransactions, setFilteredTransactions] = useState([]);
 
@@ -188,115 +223,11 @@ const Transactions = () => {
 
 
 
-  const getVoucherTheme = (voucherType, themeName) => {
-    // Map voucher types to theme types
-    const themeTypeMap = {
-      'work-order': 'work_order',
-      'purchase_escrow': 'purchase_escrow',
-      'gift-card': 'gift_card',
-      'prepaid': 'prepaid'
-    };
-    
-    const themeType = themeTypeMap[voucherType] || voucherType;
-    
-    console.log(`🎨 Looking for theme: voucherType=${voucherType}, themeType=${themeType}, themeName=${themeName}`);
-    console.log(`🎨 Available themes for ${themeType}:`, themes[themeType]);
-    
-    if (!themes[themeType] || !Array.isArray(themes[themeType])) {
-      console.log(`🎨 No themes found for ${themeType}`);
-      return null;
-    }
-    
-    // If themeName is provided, try to find it
-    if (themeName) {
-      const foundTheme = themes[themeType].find(t => t.name === themeName);
-      if (foundTheme) {
-        console.log(`🎨 Found specific theme:`, foundTheme);
-        return foundTheme;
-      }
-    }
-    
-    // Return first available theme for this type
-    const firstTheme = themes[themeType][0] || null;
-    console.log(`🎨 Using first theme:`, firstTheme);
-    return firstTheme;
-  };
 
-  const getVoucherThemeBackground = (voucherType, themeName = null) => {
-    const theme = getVoucherTheme(voucherType, themeName);
-    if (theme) {
-      return `bg-gradient-to-br ${theme.gradient_colors}`;
-    }
-    
-    // Fallback backgrounds when no theme is available
-    switch (voucherType) {
-      case 'work-order':
-        return 'bg-gradient-to-br from-blue-500 to-blue-600';
-      case 'escrow':
-      case 'purchase_escrow':
-        return 'bg-gradient-to-br from-green-500 to-green-600';
-      case 'gift-card':
-        return 'bg-gradient-to-br from-pink-500 to-purple-600';
-      case 'prepaid':
-        return 'bg-gradient-to-br from-purple-500 to-purple-600';
-      default:
-        return 'bg-gradient-to-br from-gray-500 to-gray-600';
-    }
-  };
 
-  const getVoucherIcon = (voucherType, themeName = null) => {
-    const theme = getVoucherTheme(voucherType, themeName);
-    if (theme) {
-      return <span className="text-2xl">{theme.icon_emoji}</span>;
-    }
-    
-    // Fallback icons
-    switch (voucherType) {
-      case 'work-order':
-        return <Handshake className="w-8 h-8 text-white" />;
-      case 'escrow':
-      case 'purchase_escrow':
-        return <Lock className="w-8 h-8 text-white" />;
-      case 'gift-card':
-        return <Gift className="w-8 h-8 text-white" />;
-      case 'prepaid':
-        return <CreditCard className="w-8 h-8 text-white" />;
-      default:
-        return <CreditCard className="w-8 h-8 text-white" />;
-    }
-  };
 
-  const getVoucherTitle = (voucherType) => {
-    switch (voucherType) {
-      case 'work-order':
-        return 'Work Order Voucher';
-      case 'escrow':
-      case 'purchase_escrow':
-        return 'Escrow Voucher';
-      case 'gift-card':
-        return 'Gift Card';
-      case 'prepaid':
-        return 'Prepaid Voucher';
-      default:
-        return 'Voucher';
-    }
-  };
 
-  const getVoucherSubtitle = (voucherType) => {
-    switch (voucherType) {
-      case 'work-order':
-        return 'CredoSafe Secure Transaction';
-      case 'escrow':
-      case 'purchase_escrow':
-        return 'Secure Transaction Protection';
-      case 'gift-card':
-        return 'CredoSafe Digital Gift';
-      case 'prepaid':
-        return 'Digital Wallet Credit';
-      default:
-        return 'CredoSafe Voucher';
-    }
-  };
+
 
 
 
@@ -305,9 +236,17 @@ const Transactions = () => {
   };
 
   const handleVoucherClick = (transaction) => {
+    console.log('🔍 handleVoucherClick called with transaction:', transaction);
+    console.log('🔍 transaction.voucherData:', transaction.voucherData);
+    console.log('🔍 transaction.voucherData.id:', transaction.voucherData?.id);
+    
     if (transaction.voucherData) {
       // Navigate to the voucher preview page
-      navigate(`/voucher-preview/${transaction.voucherData.id}`);
+      const voucherId = transaction.voucherData.id;
+      console.log('🔍 Navigating to voucher preview with ID:', voucherId);
+      navigate(`/voucher-preview/${voucherId}`);
+    } else {
+      console.error('❌ No voucher data found in transaction');
     }
   };
 
@@ -452,7 +391,7 @@ const Transactions = () => {
 
           {/* Transactions List */}
           <div className="bg-white rounded-2xl shadow-soft overflow-hidden">
-            <div className="p-6 border-b border-neutral-200">
+            <div className="p-4 border-b border-neutral-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-neutral-900">
                   Transaction History ({filteredTransactions.length})
@@ -467,47 +406,47 @@ const Transactions = () => {
                 filteredTransactions.map((transaction) => (
                   <div
                     key={transaction.id}
-                    className={`p-6 transition-colors ${
+                    className={`p-4 sm:p-6 transition-colors ${
                       transaction.voucherData ? 'hover:bg-neutral-50 cursor-pointer' : 'hover:bg-neutral-50'
                     }`}
                     onClick={() => transaction.voucherData && handleVoucherClick(transaction)}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex-shrink-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                      <div className="flex items-start space-x-3 sm:space-x-4">
+                        <div className="flex-shrink-0 mt-1">
                           {getTransactionIcon(transaction.type)}
                         </div>
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <p className="font-medium text-neutral-900">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 space-y-1 sm:space-y-0">
+                            <p className="font-medium text-neutral-900 text-sm sm:text-base truncate">
                               {transaction.description}
                             </p>
                             {transaction.voucherData && (
-                              <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
+                              <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded self-start sm:self-auto">
                                 Click to view voucher
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center space-x-4 text-sm text-neutral-500 mt-1">
+                          <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-xs sm:text-sm text-neutral-500 mt-1">
                             <span className="flex items-center space-x-1">
-                              <Calendar className="w-4 h-4" />
+                              <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
                               <span>{formatDate(transaction.date)}</span>
                             </span>
                             <span className="flex items-center space-x-1">
-                              <Clock className="w-4 h-4" />
+                              <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
                               <span>{formatTime(transaction.date)}</span>
                             </span>
-                            <span className="bg-neutral-100 px-2 py-1 rounded text-xs">
+                            <span className="bg-neutral-100 px-2 py-1 rounded text-xs self-start sm:self-auto">
                               {transaction.category}
                             </span>
                           </div>
-                          <p className="text-xs text-neutral-400 mt-1">
+                          <p className="text-xs text-neutral-400 mt-1 truncate">
                             Ref: {transaction.reference}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className={`font-bold text-lg ${getTypeColor(transaction.type)}`}>
+                      <div className="text-left sm:text-right">
+                        <p className={`font-bold text-base sm:text-lg ${getTypeColor(transaction.type)}`}>
                           {transaction.type === 'funding' ? '+' : ''}{formatCurrency(transaction.amount)}
                         </p>
                         <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(transaction.status)}`}>
