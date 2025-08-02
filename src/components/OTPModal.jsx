@@ -131,7 +131,7 @@ const OTPModal = ({
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-4 sm:p-6"
+            className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
           >
             {/* Close button */}
             <button
@@ -142,17 +142,17 @@ const OTPModal = ({
             </button>
 
             {/* Header */}
-            <div className="text-center mb-4 sm:mb-6">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-primary-500 to-primary-600 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-r from-primary-500 to-primary-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-neutral-900 mb-2">
+              <h3 className="text-2xl font-bold text-neutral-900 mb-2">
                 Verify Your Email
               </h3>
-              <p className="text-sm sm:text-base text-neutral-600">
+              <p className="text-neutral-600">
                 We've sent a 6-digit code to
               </p>
-              <p className="text-sm sm:text-base text-primary-600 font-semibold">
+              <p className="text-primary-600 font-semibold">
                 {email}
               </p>
             </div>
@@ -166,11 +166,11 @@ const OTPModal = ({
             )}
 
             {/* OTP Input */}
-            <div className="mb-4 sm:mb-6">
+            <div className="mb-6">
               <label className="block text-sm font-medium text-neutral-700 mb-3">
                 Enter 6-digit code
               </label>
-              <div className="flex space-x-2 sm:space-x-3 justify-center">
+              <div className="flex space-x-3 justify-center">
                 {otp.map((digit, index) => (
                   <input
                     key={index}
@@ -184,7 +184,7 @@ const OTPModal = ({
                     onKeyDown={(e) => handleKeyDown(index, e)}
                     onPaste={handlePaste}
                     onFocus={() => setActiveIndex(index)}
-                    className={`w-10 h-10 sm:w-12 sm:h-12 text-center text-base sm:text-lg font-semibold border-2 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all ${
+                    className={`w-12 h-12 text-center text-lg font-semibold border-2 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all ${
                       activeIndex === index
                         ? 'border-primary-500 bg-primary-50'
                         : digit

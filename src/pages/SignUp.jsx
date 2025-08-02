@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
@@ -8,8 +7,7 @@ import {
   Mail, 
   Lock, 
   Eye, 
-  EyeOff, 
-  ArrowLeft,
+  EyeOff,
   CheckCircle
 } from 'lucide-react';
 import { loginUser } from '../store/slices/authSlice';
@@ -39,13 +37,6 @@ const SignUp = () => {
   const { startLoading, stopLoading } = useLoading();
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState(null);
-  const [pendingUserData, setPendingUserData] = useState(null);
-
-  const fadeInUp = {
-    initial: { opacity: 0, y: 60 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.6 }
-  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -128,8 +119,7 @@ const SignUp = () => {
           console.log('❌ No token received from registration');
         }
         
-        // Store pending user data and show OTP modal
-        setPendingUserData(userData);
+        // Show OTP modal
         setShowOTPModal(true);
         setOtpError(null);
         
@@ -235,14 +225,12 @@ const SignUp = () => {
       <nav className="bg-white/80 backdrop-blur-md border-b border-neutral-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+            <div 
               className="flex items-center space-x-2"
             >
               <Shield className="w-8 h-8 text-primary-600" />
               <span className="text-xl font-bold text-neutral-900">CredoSafe</span>
-            </motion.div>
+            </div>
        
           </div>
         </div>
@@ -250,10 +238,7 @@ const SignUp = () => {
 
       {/* Sign Up Form */}
       <div className="flex items-center justify-center py-8 sm:py-12 lg:py-20 px-4 sm:px-6 lg:px-8">
-        <motion.div
-          variants={fadeInUp}
-          initial="initial"
-          animate="animate"
+        <div
           className="max-w-md w-full space-y-8"
         >
           <div className="text-center">
@@ -426,7 +411,7 @@ const SignUp = () => {
               </Link>
             </p>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       {/* OTP Verification Modal */}
@@ -439,7 +424,6 @@ const SignUp = () => {
         loading={otpLoading}
         error={otpError}
       />
-      {console.log('🔍 OTP Modal Render State:', { showOTPModal, email: formData.email })}
     </div>
   );
 };

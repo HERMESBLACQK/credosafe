@@ -21,25 +21,37 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Add these to fix CORS and header issues
+  withCredentials: false,
+  validateStatus: function (status) {
+    return status >= 200 && status < 300; // Accept all 2xx status codes
+  }
 });
 
 // Request interceptor for authentication and caching
 apiClient.interceptors.request.use(
   (config) => {
+    // Ensure headers object exists
+    if (!config.headers) {
+      config.headers = {};
+    }
+
     // Add auth token if available
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Add device info for enhanced tracking
-    config.headers['X-Device-Info'] = JSON.stringify({
-      userAgent: navigator.userAgent,
-      screenResolution: `${screen.width}x${screen.height}`,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      language: navigator.language,
-      platform: navigator.platform
-    });
+    // Add device info for enhanced tracking (only if not already set)
+    if (!config.headers['X-Device-Info']) {
+      config.headers['X-Device-Info'] = JSON.stringify({
+        userAgent: navigator.userAgent,
+        screenResolution: `${screen.width}x${screen.height}`,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        language: navigator.language,
+        platform: navigator.platform
+      });
+    }
 
     // Add cache control for GET requests
     if (config.method === 'get' && config.cacheKey) {
@@ -207,81 +219,6 @@ const apiService = {
       }
     },
 
-    sendPasswordOTP: async () => {
-      try {
-        const response = await apiClient.post('/auth/send-password-otp');
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to send password OTP');
-      }
-    },
-
-    verifyPasswordOTP: async (otpValue) => {
-      try {
-        const response = await apiClient.post('/auth/verify-password-otp', { otp: otpValue });
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Password OTP verification failed');
-      }
-    },
-
-    changePassword: async (passwordData) => {
-      try {
-        const response = await apiClient.put('/auth/change-password', passwordData);
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Password change failed');
-      }
-    },
-
-    resendOTP: async (email) => {
-      try {
-        const response = await apiClient.post('/auth/resend-otp', { email });
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to resend OTP');
-      }
-    },
-
-    updateProfile: async (profileData) => {
-      try {
-        const response = await apiClient.put('/auth/profile', profileData);
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Profile update failed');
-      }
-    },
-
-    updateSettings: async (settingsData) => {
-      try {
-        const response = await apiClient.put('/auth/settings', settingsData);
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Settings update failed');
-      }
-    },
-
-    getDevices: async () => {
-      try {
-        const response = await apiClient.get('/auth/devices', {
-          cacheKey: 'user_devices',
-          cacheTtl: 300000 // 5 minutes
-        });
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch devices');
-      }
-    },
-
-    upgradeTier: async (tierData) => {
-      try {
-        const response = await apiClient.post('/auth/upgrade-tier', tierData);
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Tier upgrade failed');
-      }
-    },
-
     getProfile: async () => {
       try {
         const response = await apiClient.get('/auth/profile', {
@@ -324,7 +261,44 @@ const apiService = {
       }
     },
 
+    upgradeTier: async (tierData) => {
+      try {
+        const response = await apiClient.post('/auth/upgrade-tier', tierData);
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to upgrade tier');
+      }
+    },
 
+    getDevices: async () => {
+      try {
+        const response = await apiClient.get('/auth/devices', {
+          cacheKey: 'user_devices',
+          cacheTtl: 300000 // 5 minutes
+        });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to fetch devices');
+      }
+    },
+
+    updateProfile: async (profileData) => {
+      try {
+        const response = await apiClient.put('/auth/profile', profileData);
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to update profile');
+      }
+    },
+
+    updateSettings: async (settingsData) => {
+      try {
+        const response = await apiClient.put('/auth/settings', settingsData);
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to update settings');
+      }
+    }
   },
 
   // Voucher endpoints
@@ -432,16 +406,11 @@ const apiService = {
 
     confirmCancel: async (voucherId) => {
       try {
-        console.log('🔍 API: Confirming cancellation for voucher:', voucherId);
-        console.log('🔍 API: Request payload:', { voucherId });
-        const response = await apiClient.post('/vouchers/confirm-cancel', { voucherId });
-        console.log('🔍 API: Confirm cancel response:', response.data);
+        const response = await apiClient.post(`/vouchers/${voucherId}/confirm-cancel`);
         // Clear vouchers cache after cancellation
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        console.error('❌ API: Confirm cancel error:', error);
-        console.error('❌ API: Error response:', error.response?.data);
         throw new Error(error.response?.data?.message || 'Failed to confirm cancellation');
       }
     },
@@ -533,15 +502,10 @@ const apiService = {
 
     searchByCode: async (voucherCode) => {
       try {
-        // Clear any cached search results to ensure fresh data
-        const cacheKey = `voucher_search_${voucherCode}`;
-        try {
-          sessionStorage.removeItem(`cache_${cacheKey}`);
-        } catch (e) {
-          // Ignore cache clearing errors
-        }
-        
-        const response = await apiClient.get(`/vouchers/search/${voucherCode}`);
+        const response = await apiClient.get(`/vouchers/search/${voucherCode}`, {
+          cacheKey: `voucher_search_${voucherCode}`,
+          cacheTtl: 300000 // 5 minutes
+        });
         return response.data;
       } catch (error) {
         throw new Error(error.response?.data?.message || 'Failed to search voucher');
@@ -637,10 +601,7 @@ const apiService = {
     // Get list of banks
     getBanks: async () => {
       try {
-        const response = await apiClient.get('/payments/banks', {
-          cacheKey: 'banks_list',
-          cacheTtl: 3600000 // 1 hour
-        });
+        const response = await apiClient.get('/payments/banks');
         return response.data;
       } catch (error) {
         throw new Error(error.response?.data?.message || 'Failed to fetch banks');

@@ -10,7 +10,9 @@ import {
   CreditCard,
   CheckCircle,
   X,
-  Loader
+  Loader,
+  Search,
+  ChevronDown
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
 import apiService from '../api';
@@ -33,6 +35,11 @@ const Withdraw = () => {
     bankCode: '',
     accountName: ''
   });
+
+  // Custom dropdown state
+  const [isBankDropdownOpen, setIsBankDropdownOpen] = useState(false);
+  const [bankSearchTerm, setBankSearchTerm] = useState('');
+  const [selectedBank, setSelectedBank] = useState(null);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -58,11 +65,15 @@ const Withdraw = () => {
     try {
       setIsLoadingBanks(true);
       const response = await apiService.payments.getBanks();
+      
       if (response.success) {
         setBanks(response.data);
+      } else {
+        console.error('❌ Banks response not successful:', response);
+        dispatch(showToast({ type: 'error', message: response.message || 'Failed to fetch banks' }));
       }
     } catch (error) {
-      console.error('Error fetching banks:', error);
+      console.error('❌ Error fetching banks:', error);
       dispatch(showToast({ type: 'error', message: 'Failed to fetch banks' }));
     } finally {
       setIsLoadingBanks(false);
@@ -74,6 +85,20 @@ const Withdraw = () => {
     fetchWalletBalance();
     fetchBanks();
   }, []);
+
+  // Handle clicking outside dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isBankDropdownOpen && !event.target.closest('.bank-dropdown-container')) {
+        setIsBankDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isBankDropdownOpen]);
 
   // Verify bank account
   const verifyAccount = async () => {
@@ -159,6 +184,31 @@ const Withdraw = () => {
     }).format(amount);
   };
 
+  // Filter banks based on search term
+  const filteredBanks = banks.filter(bank =>
+    bank.name.toLowerCase().includes(bankSearchTerm.toLowerCase())
+  );
+
+  // Handle bank selection
+  const handleBankSelect = (bank) => {
+    setSelectedBank(bank);
+    setWithdrawForm(prev => ({ ...prev, bankCode: bank.code }));
+    setBankSearchTerm(bank.name);
+    setIsBankDropdownOpen(false);
+    setIsVerified(false);
+  };
+
+  // Handle bank search input change
+  const handleBankSearchChange = (e) => {
+    const value = e.target.value;
+    setBankSearchTerm(value);
+    setIsBankDropdownOpen(true);
+    if (!value) {
+      setSelectedBank(null);
+      setWithdrawForm(prev => ({ ...prev, bankCode: '' }));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-primary-50 pb-24">
       {/* Header */}
@@ -237,28 +287,50 @@ const Withdraw = () => {
               </div>
 
               {/* Bank Selection */}
-              <div>
+              <div className="relative bank-dropdown-container">
                 <label className="block text-sm font-medium text-neutral-700 mb-2">
                   Bank
                 </label>
                 <div className="relative">
-                  <Building className="w-5 h-5 text-neutral-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                  <select
-                    value={withdrawForm.bankCode}
-                    onChange={(e) => {
-                      setWithdrawForm(prev => ({ ...prev, bankCode: e.target.value }));
-                      setIsVerified(false);
-                    }}
-                    className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  <Building className="w-5 h-5 text-neutral-400 absolute left-3 top-1/2 transform -translate-y-1/2 z-10" />
+                  <input
+                    type="text"
+                    value={bankSearchTerm}
+                    onChange={handleBankSearchChange}
+                    onFocus={() => setIsBankDropdownOpen(true)}
+                    className="w-full pl-10 pr-10 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="Search for a bank..."
                     required
-                  >
-                    <option value="">Select Bank</option>
-                    {banks.map((bank) => (
-                      <option key={bank.code} value={bank.code}>
-                        {bank.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
+                  <ChevronDown className="w-5 h-5 text-neutral-400 absolute right-3 top-1/2 transform -translate-y-1/2 z-10" />
+                  
+                  {/* Custom Dropdown */}
+                  {isBankDropdownOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-300 rounded-lg shadow-lg max-h-60 overflow-y-auto z-20">
+                      {isLoadingBanks ? (
+                        <div className="p-4 text-center text-neutral-500">
+                          <Loader className="w-5 h-5 animate-spin mx-auto mb-2" />
+                          Loading banks...
+                        </div>
+                      ) : filteredBanks.length === 0 ? (
+                        <div className="p-4 text-center text-neutral-500">
+                          No banks found
+                        </div>
+                      ) : (
+                        filteredBanks.map((bank) => (
+                          <button
+                            key={bank.code}
+                            type="button"
+                            onClick={() => handleBankSelect(bank)}
+                            className="w-full px-4 py-3 text-left hover:bg-neutral-50 focus:bg-neutral-50 focus:outline-none border-b border-neutral-100 last:border-b-0"
+                          >
+                            <div className="font-medium text-neutral-900">{bank.name}</div>
+                            <div className="text-sm text-neutral-500">Code: {bank.code}</div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

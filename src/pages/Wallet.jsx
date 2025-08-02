@@ -69,12 +69,18 @@ const Wallet = () => {
   const fetchRecentTransactions = async () => {
     try {
       setIsLoadingTransactions(true);
+      console.log('🔍 Fetching wallet transactions...');
+      console.log('🔍 apiService.payments:', apiService.payments);
+      console.log('🔍 apiService.payments.getWalletTransactions:', apiService.payments.getWalletTransactions);
+      
       const response = await apiService.payments.getWalletTransactions(1, 5);
+      console.log('📡 Wallet transactions response:', response);
+      
       if (response.success) {
         setRecentTransactions(response.data.transactions);
       }
     } catch (error) {
-      console.error('Error fetching transactions:', error);
+      console.error('❌ Error fetching transactions:', error);
       dispatch(showToast({ type: 'error', message: 'Failed to fetch transactions' }));
     } finally {
       setIsLoadingTransactions(false);
@@ -186,11 +192,9 @@ const Wallet = () => {
       });
 
       if (response.success) {
-        console.log('✅ Payment initialized, redirecting to:', response.data.checkoutUrl);
         // Redirect to Flutterwave checkout
         window.location.href = response.data.checkoutUrl;
       } else {
-        console.error('❌ Payment initialization failed:', response);
         dispatch(showToast({ type: 'error', message: response.message }));
       }
     } catch (error) {
@@ -295,7 +299,7 @@ const Wallet = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className="flex-shrink-0">
-                          {getTransactionIcon(transaction.type === 'credit' ? 'funding' : transaction.type)}
+                          {getTransactionIcon(transaction.type)}
                         </div>
                         <div>
                           <p className="font-medium text-neutral-900">
@@ -304,11 +308,11 @@ const Wallet = () => {
                           <div className="flex items-center space-x-4 text-sm text-neutral-500 mt-1">
                             <span className="flex items-center space-x-1">
                               <Calendar className="w-4 h-4" />
-                              <span>{formatDate(transaction.created_at || transaction.date)}</span>
+                              <span>{formatDate(transaction.date)}</span>
                             </span>
                             <span className="flex items-center space-x-1">
                               <Clock className="w-4 h-4" />
-                              <span>{formatTime(transaction.created_at || transaction.date)}</span>
+                              <span>{formatTime(transaction.date)}</span>
                             </span>
                           </div>
                           <p className="text-xs text-neutral-400 mt-1">
@@ -317,11 +321,11 @@ const Wallet = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`font-bold text-lg ${getTypeColor(transaction.type === 'credit' ? 'funding' : transaction.type)}`}>
-                          {(transaction.type === 'credit' || transaction.type === 'funding') ? '+' : ''}{formatCurrency(transaction.amount)}
+                        <p className={`font-bold text-lg ${getTypeColor(transaction.type)}`}>
+                          {transaction.type === 'funding' ? '+' : ''}{formatCurrency(transaction.amount)}
                         </p>
-                        <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(transaction.status || 'completed')}`}>
-                          {transaction.status || 'completed'}
+                        <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(transaction.status)}`}>
+                          {transaction.status}
                         </span>
                       </div>
                     </div>

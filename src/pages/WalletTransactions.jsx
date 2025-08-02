@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -16,29 +15,29 @@ import {
   CreditCard,
   Download,
   Eye,
-  EyeOff
+  EyeOff,
+  Loader
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
 import apiService from '../api';
 import { showToast } from '../store/slices/toastSlice';
-import { useLoading } from '../contexts/LoadingContext';
 
 const WalletTransactions = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { setLoading } = useLoading();
-  
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [showBalance, setShowBalance] = useState(true);
-  const [walletBalance, setWalletBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
-  const [filteredTransactions, setFilteredTransactions] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0
+  });
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -46,29 +45,17 @@ const WalletTransactions = () => {
     transition: { duration: 0.6 }
   };
 
-  // Fetch wallet balance
-  const fetchWalletBalance = async () => {
-    try {
-      const response = await apiService.payments.getWalletBalance();
-      if (response.success) {
-        setWalletBalance(response.data.balance);
-      }
-    } catch (error) {
-      console.error('Error fetching wallet balance:', error);
-      dispatch(showToast({ type: 'error', message: 'Failed to fetch wallet balance' }));
-    }
-  };
-
-  // Fetch transactions
+  // Fetch transactions from API
   const fetchTransactions = async (page = 1) => {
     try {
       setIsLoading(true);
       const response = await apiService.payments.getWalletTransactions(page, 10);
+      
       if (response.success) {
         setTransactions(response.data.transactions);
-        setFilteredTransactions(response.data.transactions);
-        setCurrentPage(page);
-        setTotalPages(response.data.pagination.pages);
+        setPagination(response.data.pagination);
+      } else {
+        dispatch(showToast({ type: 'error', message: response.message || 'Failed to fetch transactions' }));
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);
@@ -78,42 +65,114 @@ const WalletTransactions = () => {
     }
   };
 
-  // Load data on component mount
+  // Load transactions on component mount
   useEffect(() => {
-    fetchWalletBalance();
     fetchTransactions();
   }, []);
 
+  // Mock wallet transaction data (fallback)
+  const mockTransactions = [
+    {
+      id: '1',
+      type: 'funding',
+      amount: 500.00,
+      description: 'Bank Transfer',
+      date: '2024-01-15T10:30:00Z',
+      status: 'completed',
+      reference: 'WT-001',
+      method: 'Bank Transfer',
+      bankName: 'GT Bank'
+    },
+    {
+      id: '2',
+      type: 'withdrawal',
+      amount: -150.25,
+      description: 'Withdrawal to GT Bank',
+      date: '2024-01-14T14:20:00Z',
+      status: 'completed',
+      reference: 'WT-002',
+      method: 'Bank Transfer',
+      bankName: 'GT Bank',
+      accountNumber: '0123456789'
+    },
+    {
+      id: '3',
+      type: 'funding',
+      amount: 750.00,
+      description: 'Card Payment',
+      date: '2024-01-13T09:15:00Z',
+      status: 'completed',
+      reference: 'WT-003',
+      method: 'Card Payment',
+      cardType: 'Visa'
+    },
+    {
+      id: '4',
+      type: 'withdrawal',
+      amount: -200.00,
+      description: 'Withdrawal to Access Bank',
+      date: '2024-01-12T16:45:00Z',
+      status: 'pending',
+      reference: 'WT-004',
+      method: 'Bank Transfer',
+      bankName: 'Access Bank',
+      accountNumber: '9876543210'
+    },
+    {
+      id: '5',
+      type: 'funding',
+      amount: 1000.00,
+      description: 'USSD Payment',
+      date: '2024-01-11T11:30:00Z',
+      status: 'completed',
+      reference: 'WT-005',
+      method: 'USSD',
+      bankName: 'First Bank'
+    },
+    {
+      id: '6',
+      type: 'withdrawal',
+      amount: -75.50,
+      description: 'Withdrawal to Zenith Bank',
+      date: '2024-01-10T13:20:00Z',
+      status: 'completed',
+      reference: 'WT-006',
+      method: 'Bank Transfer',
+      bankName: 'Zenith Bank',
+      accountNumber: '1234567890'
+    }
+  ];
+
+  // Use real transactions or fallback to mock data
+  const displayTransactions = transactions.length > 0 ? transactions : mockTransactions;
+
+  const [filteredTransactions, setFilteredTransactions] = useState(displayTransactions);
+
   // Filter transactions based on search and filters
   useEffect(() => {
-    let filtered = transactions;
+    let filtered = displayTransactions;
 
     // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(transaction =>
-        transaction.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (transaction.method && transaction.method.toLowerCase().includes(searchTerm.toLowerCase()))
+        transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.method.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Filter by type
     if (selectedType !== 'all') {
-      filtered = filtered.filter(transaction => {
-        if (selectedType === 'funding') {
-          return transaction.type === 'credit' || transaction.type === 'funding';
-        }
-        return transaction.type === selectedType;
-      });
+      filtered = filtered.filter(transaction => transaction.type === selectedType);
     }
 
     // Filter by status
     if (selectedStatus !== 'all') {
-      filtered = filtered.filter(transaction => (transaction.status || 'completed') === selectedStatus);
+      filtered = filtered.filter(transaction => transaction.status === selectedStatus);
     }
 
     setFilteredTransactions(filtered);
-  }, [transactions, searchTerm, selectedType, selectedStatus]);
+  }, [displayTransactions, searchTerm, selectedType, selectedStatus]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-NG', {
@@ -161,11 +220,11 @@ const WalletTransactions = () => {
   };
 
   const totalIncome = transactions
-    .filter(t => (t.type === 'credit' || t.type === 'funding') && (t.status || 'completed') === 'completed')
+    .filter(t => t.type === 'funding' && t.status === 'completed')
     .reduce((sum, t) => sum + t.amount, 0);
 
   const totalExpenses = transactions
-    .filter(t => t.type === 'withdrawal' && (t.status || 'completed') === 'completed')
+    .filter(t => t.type === 'withdrawal' && t.status === 'completed')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
   const currentBalance = totalIncome - totalExpenses;
@@ -342,7 +401,7 @@ const WalletTransactions = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className="flex-shrink-0">
-                          {getTransactionIcon(transaction.type === 'credit' ? 'funding' : transaction.type)}
+                          {getTransactionIcon(transaction.type)}
                         </div>
                         <div>
                           <p className="font-medium text-neutral-900">
@@ -351,14 +410,14 @@ const WalletTransactions = () => {
                           <div className="flex items-center space-x-4 text-sm text-neutral-500 mt-1">
                             <span className="flex items-center space-x-1">
                               <Calendar className="w-4 h-4" />
-                              <span>{formatDate(transaction.created_at || transaction.date)}</span>
+                              <span>{formatDate(transaction.date)}</span>
                             </span>
                             <span className="flex items-center space-x-1">
                               <Clock className="w-4 h-4" />
-                              <span>{formatTime(transaction.created_at || transaction.date)}</span>
+                              <span>{formatTime(transaction.date)}</span>
                             </span>
                             <span className="bg-neutral-100 px-2 py-1 rounded text-xs">
-                              {transaction.method || 'Flutterwave'}
+                              {transaction.method}
                             </span>
                             {transaction.bankName && (
                               <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs">
@@ -377,11 +436,11 @@ const WalletTransactions = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`font-bold text-lg ${getTypeColor(transaction.type === 'credit' ? 'funding' : transaction.type)}`}>
-                          {(transaction.type === 'credit' || transaction.type === 'funding') ? '+' : ''}{formatCurrency(transaction.amount)}
+                        <p className={`font-bold text-lg ${getTypeColor(transaction.type)}`}>
+                          {transaction.type === 'funding' ? '+' : ''}{formatCurrency(transaction.amount)}
                         </p>
-                        <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(transaction.status || 'completed')}`}>
-                          {transaction.status || 'completed'}
+                        <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(transaction.status)}`}>
+                          {transaction.status}
                         </span>
                       </div>
                     </div>

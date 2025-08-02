@@ -21,10 +21,10 @@ import RedeemVoucher from './pages/RedeemVoucher';
 import Settings from './pages/Settings';
 import CreateVoucher from './pages/CreateVoucher';
 import Wallet from './pages/Wallet';
-import Withdraw from './pages/Withdraw';
 import Profile from './pages/Profile';
 import DeviceManagement from './pages/DeviceManagement';
 import WalletTransactions from './pages/WalletTransactions';
+import Withdraw from './pages/Withdraw';
 
 // Components
 import PrivateRoute from './components/PrivateRoute';
@@ -67,14 +67,13 @@ function App() {
                 <Route path="/tier" element={<PrivateRoute><Tier /></PrivateRoute>} />
                 <Route path="/change-password" element={<PrivateRoute><ChangePassword /></PrivateRoute>} />
                 <Route path="/redeem-voucher/:id" element={<PrivateRoute><RedeemVoucher /></PrivateRoute>} />
-                <Route path="/redeem-voucher" element={<PrivateRoute><RedeemVoucher /></PrivateRoute>} />
                 <Route path="/create-voucher" element={<PrivateRoute><CreateVoucher /></PrivateRoute>} />
                 <Route path="/wallet" element={<PrivateRoute><Wallet /></PrivateRoute>} />
-                <Route path="/withdraw" element={<PrivateRoute><Withdraw /></PrivateRoute>} />
                 <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
                 <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
                 <Route path="/device-management" element={<PrivateRoute><DeviceManagement /></PrivateRoute>} />
                 <Route path="/wallet-transactions" element={<PrivateRoute><WalletTransactions /></PrivateRoute>} />
+                <Route path="/withdraw" element={<PrivateRoute><Withdraw /></PrivateRoute>} />
                 {/* Fallback */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
