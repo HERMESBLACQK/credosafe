@@ -13,7 +13,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { loginUser } from '../store/slices/authSlice';
-import { showToast } from '../store/slices/uiSlice';
+import { showToast } from '../store/slices/toastSlice';
 import apiService from '../api/index';
 import OTPModal from '../components/OTPModal';
 import { useLoading } from '../contexts/LoadingContext';
@@ -117,12 +117,12 @@ const SignUp = () => {
       
       if (response.success) {
         console.log('📝 Registration response:', response);
-        console.log('🎫 Token from registration:', response.data?.data?.token);
+        console.log('🎫 Token from registration:', response.data?.token);
         
-        // Store the temporary token from registration (handle double-nested data structure)
-        const token = response.data?.data?.token || response.data?.token;
+        // Store the temporary token from registration
+        const token = response.data?.token;
         if (token) {
-          apiUtils.setAuthToken(token);
+          apiService.setAuthToken(token);
           console.log('✅ Temporary token stored after registration');
         } else {
           console.log('❌ No token received from registration');
@@ -132,6 +132,8 @@ const SignUp = () => {
         setPendingUserData(userData);
         setShowOTPModal(true);
         setOtpError(null);
+        
+        console.log('🔐 OTP Modal State:', { showOTPModal: true, email: formData.email });
         
         dispatch(showToast({ 
           message: 'Registration successful! Please verify your email with the OTP sent to your inbox.', 
@@ -167,12 +169,12 @@ const SignUp = () => {
 
       if (response.success) {
         console.log('📝 OTP verification response:', response);
-        console.log('🎫 Token from OTP verification:', response.data?.data?.token);
+        console.log('🎫 Token from OTP verification:', response.data?.token);
         
-        // Store the final token after email verification (handle double-nested data structure)
-        const token = response.data?.data?.token || response.data?.token;
+        // Store the final token after email verification
+        const token = response.data?.token;
         if (token) {
-          apiUtils.setAuthToken(token);
+          apiService.setAuthToken(token);
           console.log('✅ Final token stored after email verification');
         } else {
           console.log('❌ No token received from OTP verification');
@@ -180,7 +182,7 @@ const SignUp = () => {
         
         // Auto-login the user
         dispatch(loginUser({ 
-          user: response.data.data?.user || response.data.user,
+          user: response.data?.user,
           token: token
         }));
         
@@ -437,6 +439,7 @@ const SignUp = () => {
         loading={otpLoading}
         error={otpError}
       />
+      {console.log('🔍 OTP Modal Render State:', { showOTPModal, email: formData.email })}
     </div>
   );
 };
