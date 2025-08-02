@@ -92,39 +92,24 @@ const WalletTransactions = () => {
     if (searchTerm) {
       filtered = filtered.filter(transaction =>
         transaction.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.reference?.toLowerCase().includes(searchTerm.toLowerCase())
+        transaction.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (transaction.method && transaction.method.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
     // Filter by type
     if (selectedType !== 'all') {
-      filtered = filtered.filter(transaction => transaction.type === selectedType);
-    }
-
-    setFilteredTransactions(filtered);
-  }, [transactions, searchTerm, selectedType]);
-
-  // Filter transactions based on search and filters
-  useEffect(() => {
-    let filtered = transactions;
-
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(transaction =>
-        transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.method.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Filter by type
-    if (selectedType !== 'all') {
-      filtered = filtered.filter(transaction => transaction.type === selectedType);
+      filtered = filtered.filter(transaction => {
+        if (selectedType === 'funding') {
+          return transaction.type === 'credit' || transaction.type === 'funding';
+        }
+        return transaction.type === selectedType;
+      });
     }
 
     // Filter by status
     if (selectedStatus !== 'all') {
-      filtered = filtered.filter(transaction => transaction.status === selectedStatus);
+      filtered = filtered.filter(transaction => (transaction.status || 'completed') === selectedStatus);
     }
 
     setFilteredTransactions(filtered);
@@ -176,11 +161,11 @@ const WalletTransactions = () => {
   };
 
   const totalIncome = transactions
-    .filter(t => t.type === 'funding' && t.status === 'completed')
+    .filter(t => (t.type === 'credit' || t.type === 'funding') && (t.status || 'completed') === 'completed')
     .reduce((sum, t) => sum + t.amount, 0);
 
   const totalExpenses = transactions
-    .filter(t => t.type === 'withdrawal' && t.status === 'completed')
+    .filter(t => t.type === 'withdrawal' && (t.status || 'completed') === 'completed')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
   const currentBalance = totalIncome - totalExpenses;
@@ -357,7 +342,7 @@ const WalletTransactions = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className="flex-shrink-0">
-                          {getTransactionIcon(transaction.type)}
+                          {getTransactionIcon(transaction.type === 'credit' ? 'funding' : transaction.type)}
                         </div>
                         <div>
                           <p className="font-medium text-neutral-900">
@@ -366,14 +351,14 @@ const WalletTransactions = () => {
                           <div className="flex items-center space-x-4 text-sm text-neutral-500 mt-1">
                             <span className="flex items-center space-x-1">
                               <Calendar className="w-4 h-4" />
-                              <span>{formatDate(transaction.date)}</span>
+                              <span>{formatDate(transaction.created_at || transaction.date)}</span>
                             </span>
                             <span className="flex items-center space-x-1">
                               <Clock className="w-4 h-4" />
-                              <span>{formatTime(transaction.date)}</span>
+                              <span>{formatTime(transaction.created_at || transaction.date)}</span>
                             </span>
                             <span className="bg-neutral-100 px-2 py-1 rounded text-xs">
-                              {transaction.method}
+                              {transaction.method || 'Flutterwave'}
                             </span>
                             {transaction.bankName && (
                               <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs">
@@ -392,11 +377,11 @@ const WalletTransactions = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`font-bold text-lg ${getTypeColor(transaction.type)}`}>
-                          {transaction.type === 'funding' ? '+' : ''}{formatCurrency(transaction.amount)}
+                        <p className={`font-bold text-lg ${getTypeColor(transaction.type === 'credit' ? 'funding' : transaction.type)}`}>
+                          {(transaction.type === 'credit' || transaction.type === 'funding') ? '+' : ''}{formatCurrency(transaction.amount)}
                         </p>
-                        <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(transaction.status)}`}>
-                          {transaction.status}
+                        <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(transaction.status || 'completed')}`}>
+                          {transaction.status || 'completed'}
                         </span>
                       </div>
                     </div>

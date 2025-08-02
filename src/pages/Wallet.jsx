@@ -295,7 +295,7 @@ const Wallet = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className="flex-shrink-0">
-                          {getTransactionIcon(transaction.type)}
+                          {getTransactionIcon(transaction.type === 'credit' ? 'funding' : transaction.type)}
                         </div>
                         <div>
                           <p className="font-medium text-neutral-900">
@@ -304,11 +304,11 @@ const Wallet = () => {
                           <div className="flex items-center space-x-4 text-sm text-neutral-500 mt-1">
                             <span className="flex items-center space-x-1">
                               <Calendar className="w-4 h-4" />
-                              <span>{formatDate(transaction.date)}</span>
+                              <span>{formatDate(transaction.created_at || transaction.date)}</span>
                             </span>
                             <span className="flex items-center space-x-1">
                               <Clock className="w-4 h-4" />
-                              <span>{formatTime(transaction.date)}</span>
+                              <span>{formatTime(transaction.created_at || transaction.date)}</span>
                             </span>
                           </div>
                           <p className="text-xs text-neutral-400 mt-1">
@@ -317,11 +317,11 @@ const Wallet = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`font-bold text-lg ${getTypeColor(transaction.type)}`}>
-                          {transaction.type === 'funding' ? '+' : ''}{formatCurrency(transaction.amount)}
+                        <p className={`font-bold text-lg ${getTypeColor(transaction.type === 'credit' ? 'funding' : transaction.type)}`}>
+                          {(transaction.type === 'credit' || transaction.type === 'funding') ? '+' : ''}{formatCurrency(transaction.amount)}
                         </p>
-                        <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(transaction.status)}`}>
-                          {transaction.status}
+                        <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(transaction.status || 'completed')}`}>
+                          {transaction.status || 'completed'}
                         </span>
                       </div>
                     </div>
