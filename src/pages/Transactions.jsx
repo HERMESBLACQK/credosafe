@@ -49,6 +49,15 @@ const Transactions = () => {
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [_themes, setThemes] = useState({});
   const [_loadingThemes, setLoadingThemes] = useState(false);
+  
+  // New state for transactions
+  const [transactions, setTransactions] = useState([]);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
+  const [transactionSummary, setTransactionSummary] = useState({
+    totalCreations: 0,
+    totalRedemptions: 0,
+    totalTransactions: 0
+  });
 
   useEffect(() => {
     dispatch(fetchVouchers());
@@ -68,6 +77,30 @@ const Transactions = () => {
         setUserBalance(0);
       } finally {
         setIsLoadingBalance(false);
+      }
+    };
+
+    // Fetch transactions including voucher creations and redemptions
+    const fetchTransactions = async () => {
+      try {
+        setIsLoadingTransactions(true);
+        console.log('🔍 Fetching transactions...');
+        const response = await apiService.vouchers.getTransactions();
+        console.log('📊 Transactions response:', response);
+        
+        if (response.success) {
+          setTransactions(response.data.transactions || []);
+          setTransactionSummary(response.data.summary || {});
+          console.log('✅ Transactions loaded:', response.data.transactions?.length);
+        } else {
+          console.error('❌ Failed to fetch transactions:', response.message);
+          setTransactions([]);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching transactions:', error);
+        setTransactions([]);
+      } finally {
+        setIsLoadingTransactions(false);
       }
     };
 
@@ -107,6 +140,7 @@ const Transactions = () => {
     };
 
     fetchBalance();
+    fetchTransactions();
     fetchThemes();
   }, [dispatch, user]);
 
@@ -118,35 +152,16 @@ const Transactions = () => {
     }
   }, [userProfile?.wallet?.balance, isUserLoaded]);
 
-  // Debug: Log vouchers data
+  // Debug: Log transactions data
   useEffect(() => {
-    console.log('🔍 Vouchers data in Transactions:', vouchers);
-    console.log('🔍 Vouchers type:', typeof vouchers);
-    console.log('🔍 Vouchers is array:', Array.isArray(vouchers));
-    if (Array.isArray(vouchers)) {
-      console.log('🔍 Vouchers length:', vouchers.length);
-      console.log('🔍 First voucher:', vouchers[0]);
+    console.log('🔍 Transactions data:', transactions);
+    console.log('🔍 Transactions type:', typeof transactions);
+    console.log('🔍 Transactions is array:', Array.isArray(transactions));
+    if (Array.isArray(transactions)) {
+      console.log('🔍 Transactions length:', transactions.length);
+      console.log('🔍 First transaction:', transactions[0]);
     }
-  }, [vouchers]);
-
-  // Convert vouchers to transaction format for display
-  const transactions = useMemo(() => {
-    if (!Array.isArray(vouchers)) {
-      return [];
-    }
-    return vouchers.map(voucher => ({
-      id: voucher.id,
-      type: 'funding',
-      amount: parseFloat(voucher.total_amount),
-      description: `${voucher.type.replace('-', ' ').toUpperCase()} Voucher Created`,
-      date: voucher.created_at,
-      status: voucher.status,
-      reference: voucher.voucher_code,
-      category: voucher.type.replace('-', ' ').toUpperCase(),
-      voucherType: voucher.type,
-      voucherData: voucher
-    }));
-  }, [vouchers]);
+  }, [transactions]);
 
   const [filteredTransactions, setFilteredTransactions] = useState([]);
 
@@ -159,7 +174,8 @@ const Transactions = () => {
       filtered = filtered.filter(transaction =>
         transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         transaction.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.category.toLowerCase().includes(searchTerm.toLowerCase())
+        transaction.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (transaction.title && transaction.title.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -199,12 +215,10 @@ const Transactions = () => {
   };
 
   const getTransactionIcon = (type) => {
-    return type === 'funding' ? 
+    return type === 'credit' ? 
       <TrendingUp className="w-5 h-5 text-green-500" /> : 
       <TrendingDown className="w-5 h-5 text-red-500" />;
   };
-
-
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -221,43 +235,28 @@ const Transactions = () => {
     }
   };
 
-
-
-
-
-
-
-
-
-
-
   const getTypeColor = (type) => {
-    return type === 'funding' ? 'text-green-600' : 'text-red-600';
+    return type === 'credit' ? 'text-green-600' : 'text-red-600';
   };
 
   const handleVoucherClick = (transaction) => {
     console.log('🔍 handleVoucherClick called with transaction:', transaction);
-    console.log('🔍 transaction.voucherData:', transaction.voucherData);
-    console.log('🔍 transaction.voucherData.id:', transaction.voucherData?.id);
     
-    if (transaction.voucherData) {
-      // Navigate to the voucher preview page
-      const voucherId = transaction.voucherData.id;
-      console.log('🔍 Navigating to voucher preview with ID:', voucherId);
-      navigate(`/voucher-preview/${voucherId}`);
+    // Only allow clicking on voucher creations (debit transactions)
+    if (transaction.type === 'debit' && transaction.id) {
+      console.log('🔍 Navigating to voucher preview with ID:', transaction.id);
+      navigate(`/voucher-preview/${transaction.id}`);
     } else {
-      console.error('❌ No voucher data found in transaction');
+      console.log('🔍 Transaction is not a voucher creation or has no ID');
     }
   };
 
-
-
   const totalIncome = transactions
-    .filter(t => t.type === 'funding' && (t.status === 'completed' || t.status === 'active'))
+    .filter(t => t.type === 'credit' && (t.status === 'completed' || t.status === 'active'))
     .reduce((sum, t) => sum + t.amount, 0);
 
   const totalExpenses = transactions
-    .filter(t => t.type === 'withdrawal' && (t.status === 'completed' || t.status === 'active'))
+    .filter(t => t.type === 'debit' && (t.status === 'completed' || t.status === 'active'))
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
   // Use wallet balance from database instead of calculating from transactions
@@ -298,7 +297,7 @@ const Transactions = () => {
                 <span className="text-sm">{showBalance ? 'Hide' : 'Show'} Balance</span>
               </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="text-center">
                 <p className="text-sm text-neutral-600 mb-1">Current Balance</p>
                 <p className="text-2xl font-bold text-neutral-900">
@@ -306,16 +305,34 @@ const Transactions = () => {
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-neutral-600 mb-1">Total Income</p>
+                <p className="text-sm text-neutral-600 mb-1">Total Income (Redemptions)</p>
                 <p className="text-2xl font-bold text-green-600">
                   {showBalance ? formatCurrency(totalIncome) : '••••••'}
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-neutral-600 mb-1">Total Expenses</p>
+                <p className="text-sm text-neutral-600 mb-1">Total Expenses (Creations)</p>
                 <p className="text-2xl font-bold text-red-600">
                   {showBalance ? formatCurrency(totalExpenses) : '••••••'}
                 </p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-neutral-600 mb-1">Total Transactions</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {transactionSummary.totalTransactions}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-neutral-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="text-center">
+                  <p className="text-neutral-600">Voucher Creations</p>
+                  <p className="font-semibold text-red-600">{transactionSummary.totalCreations}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-neutral-600">Voucher Redemptions</p>
+                  <p className="font-semibold text-green-600">{transactionSummary.totalRedemptions}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -365,8 +382,8 @@ const Transactions = () => {
                       className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     >
                       <option value="all">All Types</option>
-                      <option value="funding">Funding</option>
-                      <option value="withdrawal">Withdrawal</option>
+                      <option value="credit">Credit (Voucher Creation)</option>
+                      <option value="debit">Debit (Voucher Redemption)</option>
                     </select>
                   </div>
                   <div>
@@ -402,14 +419,19 @@ const Transactions = () => {
               </div>
             </div>
             <div className="divide-y divide-neutral-200">
-              {filteredTransactions.length > 0 ? (
+              {isLoadingTransactions ? (
+                <div className="p-12 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                  <p className="text-neutral-600">Loading transactions...</p>
+                </div>
+              ) : filteredTransactions.length > 0 ? (
                 filteredTransactions.map((transaction) => (
                   <div
-                    key={transaction.id}
+                    key={`${transaction.type}-${transaction.id}`}
                     className={`p-4 sm:p-6 transition-colors ${
-                      transaction.voucherData ? 'hover:bg-neutral-50 cursor-pointer' : 'hover:bg-neutral-50'
+                      transaction.type === 'debit' ? 'hover:bg-neutral-50 cursor-pointer' : 'hover:bg-neutral-50'
                     }`}
-                    onClick={() => transaction.voucherData && handleVoucherClick(transaction)}
+                    onClick={() => transaction.type === 'debit' && handleVoucherClick(transaction)}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
                       <div className="flex items-start space-x-3 sm:space-x-4">
@@ -421,9 +443,14 @@ const Transactions = () => {
                             <p className="font-medium text-neutral-900 text-sm sm:text-base truncate">
                               {transaction.description}
                             </p>
-                            {transaction.voucherData && (
+                            {transaction.type === 'debit' && (
                               <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded self-start sm:self-auto">
                                 Click to view voucher
+                              </span>
+                            )}
+                            {transaction.type === 'credit' && (
+                              <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded self-start sm:self-auto">
+                                Voucher redeemed
                               </span>
                             )}
                           </div>
@@ -437,17 +464,27 @@ const Transactions = () => {
                               <span>{formatTime(transaction.date)}</span>
                             </span>
                             <span className="bg-neutral-100 px-2 py-1 rounded text-xs self-start sm:self-auto">
-                              {transaction.category}
+                              {transaction.voucher_type ? transaction.voucher_type.replace('_', ' ').toUpperCase() : transaction.category}
                             </span>
+                            {transaction.redemption_type && (
+                              <span className="bg-purple-100 text-purple-600 px-2 py-1 rounded text-xs self-start sm:self-auto">
+                                {transaction.redemption_type}
+                              </span>
+                            )}
                           </div>
                           <p className="text-xs text-neutral-400 mt-1 truncate">
                             Ref: {transaction.reference}
                           </p>
+                          {transaction.title && (
+                            <p className="text-xs text-neutral-500 mt-1 truncate">
+                              {transaction.title}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="text-left sm:text-right">
                         <p className={`font-bold text-base sm:text-lg ${getTypeColor(transaction.type)}`}>
-                          {transaction.type === 'funding' ? '+' : ''}{formatCurrency(transaction.amount)}
+                          {transaction.type === 'credit' ? '+' : '-'}{formatCurrency(transaction.amount)}
                         </p>
                         <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(transaction.status)}`}>
                           {transaction.status}

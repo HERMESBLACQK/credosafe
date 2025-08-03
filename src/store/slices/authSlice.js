@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import apiService from '../../api';
+import { secureTokenStorage, clearSensitiveCache } from '../../utils/security';
 
 // Async thunks with better error handling and caching
 export const loginUser = createAsyncThunk(
@@ -8,8 +9,8 @@ export const loginUser = createAsyncThunk(
     try {
       const response = await apiService.auth.login(credentials);
       if (response.success) {
-        // Store token securely
-        localStorage.setItem('token', response.data.token);
+        // Store token securely using security utilities
+        secureTokenStorage.setToken(response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
         
         // Set token in API service for future requests

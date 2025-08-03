@@ -104,12 +104,12 @@ const PrepaidVouchers = () => {
               <span className="text-xl font-bold text-gray-900">Prepaid Vouchers</span>
             </motion.div>
             <motion.a 
-              href="/"
+              href="/landingpage"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-2 text-gray-600 hover:text-purple-600 transition-colors"
+              className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
               <span>Back to Home</span>
             </motion.a>
           </div>
@@ -362,8 +362,8 @@ const PrepaidVouchers = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-gray-400">
             &copy; 2024 CredoSafe. All rights reserved. | 
-            <a href="/privacy" className="text-blue-400 hover:text-blue-300 ml-2">Privacy Policy</a> | 
-            <a href="/terms" className="text-blue-400 hover:text-blue-300 ml-2">Terms of Service</a>
+            <a href="/landingpage/privacy-policy" className="text-blue-400 hover:text-blue-300 ml-2">Privacy Policy</a> | 
+            <a href="/landingpage/terms-of-service" className="text-blue-400 hover:text-blue-300 ml-2">Terms of Service</a>
           </p>
         </div>
       </footer>

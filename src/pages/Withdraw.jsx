@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -19,6 +20,7 @@ import apiService from '../api';
 import { showToast } from '../store/slices/toastSlice';
 import { useLoading } from '../contexts/LoadingContext';
 
+
 const Withdraw = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -29,6 +31,8 @@ const Withdraw = () => {
   const [isLoadingBanks, setIsLoadingBanks] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [userTier, setUserTier] = useState(null);
+  const [tierLimits, setTierLimits] = useState(null);
   const [withdrawForm, setWithdrawForm] = useState({
     amount: '',
     accountNumber: '',
@@ -39,12 +43,67 @@ const Withdraw = () => {
   // Custom dropdown state
   const [isBankDropdownOpen, setIsBankDropdownOpen] = useState(false);
   const [bankSearchTerm, setBankSearchTerm] = useState('');
-  const [selectedBank, setSelectedBank] = useState(null);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
     animate: { opacity: 1, y: 0 },
     transition: { duration: 0.6 }
+  };
+
+  // Fetch user tier and limits
+  const fetchUserTier = async () => {
+    try {
+      const response = await apiService.auth.getTier();
+      if (response.success) {
+        setUserTier(response.data.tier.level);
+        try {
+          const tierResponse = await apiService.auth.getTierLimits(response.data.tier.level);
+          if (tierResponse.success) {
+            setTierLimits(tierResponse.data);
+          } else {
+            setTierLimits({
+              daily_withdrawal_limit: 50000,
+              monthly_withdrawal_limit: 500000,
+              max_voucher_amount: 100000,
+              daily_limit: 1000000
+            });
+          }
+        } catch (error) {
+          setTierLimits({
+            daily_withdrawal_limit: 50000,
+            monthly_withdrawal_limit: 500000,
+            max_voucher_amount: 100000,
+            daily_limit: 1000000
+          });
+        }
+      } else {
+        if (response.status === 401 || response.status === 403) {
+          alert('Session expired or not authorized. Please log in again.');
+          window.location.href = '/signin';
+        } else {
+          setUserTier(1);
+          setTierLimits({
+            daily_withdrawal_limit: 50000,
+            monthly_withdrawal_limit: 500000,
+            max_voucher_amount: 100000,
+            daily_limit: 1000000
+          });
+        }
+      }
+    } catch (error) {
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        alert('Session expired or not authorized. Please log in again.');
+        window.location.href = '/signin';
+      } else {
+        setUserTier(1);
+        setTierLimits({
+          daily_withdrawal_limit: 50000,
+          monthly_withdrawal_limit: 500000,
+          max_voucher_amount: 100000,
+          daily_limit: 1000000
+        });
+      }
+    }
   };
 
   // Fetch wallet balance
@@ -84,6 +143,7 @@ const Withdraw = () => {
   useEffect(() => {
     fetchWalletBalance();
     fetchBanks();
+    fetchUserTier();
   }, []);
 
   // Handle clicking outside dropdown
@@ -151,6 +211,18 @@ const Withdraw = () => {
       return;
     }
 
+    // Check tier limits
+    if (tierLimits) {
+      const withdrawalAmount = parseFloat(withdrawForm.amount);
+      if (withdrawalAmount > tierLimits.daily_withdrawal_limit) {
+        dispatch(showToast({ 
+          type: 'error', 
+          message: `Withdrawal amount exceeds your tier's daily limit of ₦${tierLimits.daily_withdrawal_limit.toLocaleString()}` 
+        }));
+        return;
+      }
+    }
+
     try {
       startGlobalLoading();
       const response = await apiService.payments.withdraw({
@@ -191,7 +263,6 @@ const Withdraw = () => {
 
   // Handle bank selection
   const handleBankSelect = (bank) => {
-    setSelectedBank(bank);
     setWithdrawForm(prev => ({ ...prev, bankCode: bank.code }));
     setBankSearchTerm(bank.name);
     setIsBankDropdownOpen(false);
@@ -204,7 +275,6 @@ const Withdraw = () => {
     setBankSearchTerm(value);
     setIsBankDropdownOpen(true);
     if (!value) {
-      setSelectedBank(null);
       setWithdrawForm(prev => ({ ...prev, bankCode: '' }));
     }
   };
@@ -248,16 +318,25 @@ const Withdraw = () => {
             <p className="text-neutral-600">Withdraw money from your wallet to your bank account</p>
           </div>
 
-          {/* Balance Card */}
-          <div className="bg-white rounded-2xl shadow-soft p-6 mb-6">
-            <div className="text-center">
-              <h2 className="text-lg font-semibold text-neutral-900 mb-2">Available Balance</h2>
-              <p className="text-3xl font-bold text-primary-600 mb-2">
-                {formatCurrency(walletBalance)}
-              </p>
-              <p className="text-sm text-neutral-600">Maximum withdrawal amount</p>
-            </div>
-          </div>
+                     {/* Balance Card */}
+           <div className="bg-white rounded-2xl shadow-soft p-6 mb-6">
+             <div className="text-center">
+               <h2 className="text-lg font-semibold text-neutral-900 mb-2">Available Balance</h2>
+               <p className="text-3xl font-bold text-primary-600 mb-2">
+                 {formatCurrency(walletBalance)}
+               </p>
+               <p className="text-sm text-neutral-600">Maximum withdrawal amount</p>
+               {userTier && tierLimits && (
+                 <div className="mt-4 pt-4 border-t border-neutral-200">
+                   <p className="text-sm text-neutral-600 mb-1">Your Tier: {userTier}</p>
+                   <p className="text-xs text-neutral-500">
+                     Daily Limit: {formatCurrency(tierLimits.daily_withdrawal_limit)} | 
+                     Monthly Limit: {formatCurrency(tierLimits.monthly_withdrawal_limit)}
+                   </p>
+                 </div>
+               )}
+             </div>
+           </div>
 
           {/* Withdrawal Form */}
           <div className="bg-white rounded-2xl shadow-soft p-6">

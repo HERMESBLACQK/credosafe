@@ -24,10 +24,12 @@ import {
 import apiService from '../api/index';
 import { showToast } from '../store/slices/uiSlice';
 import FloatingFooter from '../components/FloatingFooter';
+import { useSelector } from 'react-redux';
 
 const Tier = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { isAuthenticated } = useSelector(state => state.auth);
   
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [selectedTier, setSelectedTier] = useState(null);
@@ -36,7 +38,9 @@ const Tier = () => {
     bvn: '',
     dob: '',
     phone: '',
-    addressProof: null
+    addressProof: null,
+    businessRegNumber: '',
+    cacCertificate: null
   });
   const [otp, setOtp] = useState('');
   const [currentTier, setCurrentTier] = useState(1);
@@ -55,8 +59,8 @@ const Tier = () => {
       name: 'Basic',
       description: 'Essential features for new users',
       limits: {
-        dailyTransaction: 50000,
-        monthlyTransaction: 500000,
+        dailyLimit: 1000000, // 10x max voucher
+        monthlyWithdrawal: 500000,
         maxVoucherAmount: 100000,
         dailyWithdrawal: 50000
       },
@@ -75,8 +79,8 @@ const Tier = () => {
       name: 'Premium',
       description: 'Enhanced limits and features',
       limits: {
-        dailyTransaction: 500000,
-        monthlyTransaction: 5000000,
+        dailyLimit: 10000000, // 10x max voucher
+        monthlyWithdrawal: 10000000,
         maxVoucherAmount: 1000000,
         dailyWithdrawal: 500000
       },
@@ -95,56 +99,91 @@ const Tier = () => {
     },
     {
       id: 3,
-      name: 'Business',
-      description: 'Professional features for businesses',
+      name: 'Advanced Premium',
+      description: 'Advanced features for power users',
       limits: {
-        dailyTransaction: 5000000,
-        monthlyTransaction: 50000000,
-        maxVoucherAmount: 10000000,
+        dailyLimit: 250000000, // 10x max voucher
+        monthlyWithdrawal: 25000000,
+        maxVoucherAmount: 25000000,
         dailyWithdrawal: 5000000
       },
       features: [
-        'Unlimited transactions',
+        'Advanced transaction limits',
+        'Priority support',
+        'Advanced security',
+        'Proof of address verification',
+        'Enhanced voucher features',
+        'Faster processing',
+        'Dedicated support'
+      ],
+      price: 'Free',
+      color: 'from-purple-500 to-purple-600',
+      icon: <Crown className="w-6 h-6 text-white" />,
+      requirements: ['Proof of Address']
+    },
+    {
+      id: 4,
+      name: 'Business',
+      description: 'Professional features for businesses',
+      limits: {
+        dailyLimit: 2000000000, // 10x max voucher (unlimited voucher = 200M daily limit)
+        monthlyWithdrawal: 50000000,
+        maxVoucherAmount: 200000000, // Unlimited (set high limit)
+        dailyWithdrawal: 20000000
+      },
+      features: [
+        'Unlimited voucher amounts',
         'Business support',
         'API access',
         'Custom branding',
-        'Proof of address',
+        'Business registration',
         'Multi-user accounts',
         'Advanced analytics',
         'Dedicated account manager'
       ],
       price: 'Free',
-      color: 'from-purple-500 to-purple-600',
+      color: 'from-indigo-500 to-indigo-600',
       icon: <Building className="w-6 h-6 text-white" />,
-      requirements: ['NIN or BVN', 'Date of Birth', 'Registered Phone Number', 'Proof of Address']
+      requirements: ['Business Registration Number', 'CAC Certificate']
     }
   ];
 
   // Fetch current tier on component mount
   useEffect(() => {
-    fetchCurrentTier();
-  }, []);
+    if (isAuthenticated) {
+      fetchCurrentTier();
+    } else {
+      setFetchingTier(false);
+      dispatch(showToast({
+        message: 'Please log in to view tier information',
+        type: 'error'
+      }));
+      navigate('/login');
+    }
+  }, [isAuthenticated, navigate, dispatch]);
 
   const fetchCurrentTier = async () => {
     try {
-      setFetchingTier(true);
       const response = await apiService.auth.getTier();
-      
       if (response.success) {
-        setCurrentTier(response.data.data.tier.level);
+        setCurrentTier(response.data.tier.level);
       } else {
-        console.error('Failed to fetch tier:', response.error);
-        dispatch(showToast({
-          message: 'Failed to fetch tier information',
-          type: 'error'
-        }));
+        if (response.status === 401 || response.status === 403) {
+          alert('Session expired or not authorized. Please log in again.');
+          window.location.href = '/signin';
+          return;
+        } else {
+          setCurrentTier(1);
+        }
       }
     } catch (error) {
-      console.error('Error fetching tier:', error);
-      dispatch(showToast({
-        message: 'Failed to fetch tier information',
-        type: 'error'
-      }));
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        alert('Session expired or not authorized. Please log in again.');
+        window.location.href = '/signin';
+        return;
+      } else {
+        setCurrentTier(1);
+      }
     } finally {
       setFetchingTier(false);
     }
@@ -164,13 +203,25 @@ const Tier = () => {
     try {
       setUpgrading(true);
 
-      // Prepare documents object
-      const documents = {
-        nin: upgradeForm.nin || upgradeForm.bvn,
-        dob: upgradeForm.dob,
-        phone: upgradeForm.phone,
-        addressProof: selectedTier.id === 3 ? upgradeForm.addressProof : null
-      };
+      // Prepare documents object based on tier
+      let documents = {};
+      
+      if (selectedTier.id === 2) {
+        documents = {
+          nin: upgradeForm.nin || upgradeForm.bvn,
+          dob: upgradeForm.dob,
+          phone: upgradeForm.phone
+        };
+      } else if (selectedTier.id === 3) {
+        documents = {
+          addressProof: upgradeForm.addressProof
+        };
+      } else if (selectedTier.id === 4) {
+        documents = {
+          businessRegNumber: upgradeForm.businessRegNumber,
+          cacCertificate: upgradeForm.cacCertificate
+        };
+      }
 
       const response = await apiService.auth.upgradeTier({
         targetTier: selectedTier.id,
@@ -185,7 +236,9 @@ const Tier = () => {
           bvn: '',
           dob: '',
           phone: '',
-          addressProof: null
+          addressProof: null,
+          businessRegNumber: '',
+          cacCertificate: null
         });
         
         dispatch(showToast({
@@ -220,12 +273,12 @@ const Tier = () => {
     }
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = (e, type) => {
     const file = e.target.files[0];
     if (file) {
       setUpgradeForm(prev => ({
         ...prev,
-        addressProof: file
+        [type]: file
       }));
     }
   };
@@ -302,11 +355,11 @@ const Tier = () => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
                       <span className="text-neutral-500">Daily Limit:</span>
-                      <p className="font-semibold text-neutral-900">₦{tiers[currentTier - 1].limits.dailyTransaction.toLocaleString()}</p>
+                      <p className="font-semibold text-neutral-900">₦{tiers[currentTier - 1].limits.dailyLimit.toLocaleString()}</p>
                     </div>
                     <div>
-                      <span className="text-neutral-500">Monthly Limit:</span>
-                      <p className="font-semibold text-neutral-900">₦{tiers[currentTier - 1].limits.monthlyTransaction.toLocaleString()}</p>
+                      <span className="text-neutral-500">Monthly Withdrawal:</span>
+                      <p className="font-semibold text-neutral-900">₦{tiers[currentTier - 1].limits.monthlyWithdrawal.toLocaleString()}</p>
                     </div>
                     <div>
                       <span className="text-neutral-500">Max Voucher:</span>
@@ -360,11 +413,11 @@ const Tier = () => {
                         <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4">
                           <div className="bg-white rounded-lg p-2 sm:p-3">
                             <p className="text-xs text-neutral-500 mb-1">Daily Limit</p>
-                            <p className="font-semibold text-neutral-900 text-xs sm:text-sm">₦{tier.limits.dailyTransaction.toLocaleString()}</p>
+                            <p className="font-semibold text-neutral-900 text-xs sm:text-sm">₦{tier.limits.dailyLimit.toLocaleString()}</p>
                           </div>
                           <div className="bg-white rounded-lg p-2 sm:p-3">
-                            <p className="text-xs text-neutral-500 mb-1">Monthly Limit</p>
-                            <p className="font-semibold text-neutral-900 text-xs sm:text-sm">₦{tier.limits.monthlyTransaction.toLocaleString()}</p>
+                            <p className="text-xs text-neutral-500 mb-1">Monthly Withdrawal</p>
+                            <p className="font-semibold text-neutral-900 text-xs sm:text-sm">₦{tier.limits.monthlyWithdrawal.toLocaleString()}</p>
                           </div>
                           <div className="bg-white rounded-lg p-2 sm:p-3">
                             <p className="text-xs text-neutral-500 mb-1">Max Voucher</p>
@@ -437,84 +490,132 @@ const Tier = () => {
                 </div>
               </div>
               
-              <form onSubmit={handleUpgradeSubmit} className="space-y-6">
-                {selectedTier.id >= 2 && (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-neutral-700 mb-2">
-                          NIN or BVN *
-                        </label>
-                        <input
-                          type="text"
-                          value={upgradeForm.nin}
-                          onChange={(e) => setUpgradeForm(prev => ({ ...prev, nin: e.target.value }))}
-                          className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                          placeholder="Enter NIN or BVN"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-neutral-700 mb-2">
-                          Date of Birth *
-                        </label>
-                        <input
-                          type="date"
-                          value={upgradeForm.dob}
-                          onChange={(e) => setUpgradeForm(prev => ({ ...prev, dob: e.target.value }))}
-                          className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-700 mb-2">
-                        Registered Phone Number *
-                      </label>
-                      <input
-                        type="tel"
-                        value={upgradeForm.phone}
-                        onChange={(e) => setUpgradeForm(prev => ({ ...prev, phone: e.target.value }))}
-                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        placeholder="+234 801 234 5678"
-                        required
-                      />
-                    </div>
-                  </>
-                )}
+                             <form onSubmit={handleUpgradeSubmit} className="space-y-6">
+                 {selectedTier.id === 2 && (
+                   <>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                       <div>
+                         <label className="block text-sm font-medium text-neutral-700 mb-2">
+                           NIN or BVN *
+                         </label>
+                         <input
+                           type="text"
+                           value={upgradeForm.nin}
+                           onChange={(e) => setUpgradeForm(prev => ({ ...prev, nin: e.target.value }))}
+                           className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                           placeholder="Enter NIN or BVN"
+                           required
+                         />
+                       </div>
+                       <div>
+                         <label className="block text-sm font-medium text-neutral-700 mb-2">
+                           Date of Birth *
+                         </label>
+                         <input
+                           type="date"
+                           value={upgradeForm.dob}
+                           onChange={(e) => setUpgradeForm(prev => ({ ...prev, dob: e.target.value }))}
+                           className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                           required
+                         />
+                       </div>
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-neutral-700 mb-2">
+                         Registered Phone Number *
+                       </label>
+                       <input
+                         type="tel"
+                         value={upgradeForm.phone}
+                         onChange={(e) => setUpgradeForm(prev => ({ ...prev, phone: e.target.value }))}
+                         className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                         placeholder="+234 801 234 5678"
+                         required
+                       />
+                     </div>
+                   </>
+                 )}
 
-                {selectedTier.id === 3 && (
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-2">
-                      Proof of Address *
-                    </label>
-                    <div className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center">
-                      <Upload className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
-                      <p className="text-sm text-neutral-600 mb-2">
-                        Upload utility bill, bank statement, or government ID
-                      </p>
-                      <input
-                        type="file"
-                        onChange={handleFileUpload}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        className="hidden"
-                        id="address-proof"
-                        required
-                      />
-                      <label
-                        htmlFor="address-proof"
-                        className="inline-block px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors cursor-pointer"
-                      >
-                        Choose File
-                      </label>
-                      {upgradeForm.addressProof && (
-                        <p className="text-sm text-green-600 mt-2">
-                          ✓ {upgradeForm.addressProof.name}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
+                 {selectedTier.id === 3 && (
+                   <div>
+                     <label className="block text-sm font-medium text-neutral-700 mb-2">
+                       Proof of Address *
+                     </label>
+                     <div className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center">
+                       <Upload className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
+                       <p className="text-sm text-neutral-600 mb-2">
+                         Upload utility bill, bank statement, or government ID
+                       </p>
+                       <input
+                         type="file"
+                         onChange={(e) => handleFileUpload(e, 'addressProof')}
+                         accept=".pdf,.jpg,.jpeg,.png"
+                         className="hidden"
+                         id="address-proof"
+                         required
+                       />
+                       <label
+                         htmlFor="address-proof"
+                         className="inline-block px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors cursor-pointer"
+                       >
+                         Choose File
+                       </label>
+                       {upgradeForm.addressProof && (
+                         <p className="text-sm text-green-600 mt-2">
+                           ✓ {upgradeForm.addressProof.name}
+                         </p>
+                       )}
+                     </div>
+                   </div>
+                 )}
+
+                 {selectedTier.id === 4 && (
+                   <>
+                     <div>
+                       <label className="block text-sm font-medium text-neutral-700 mb-2">
+                         Business Registration Number *
+                       </label>
+                       <input
+                         type="text"
+                         value={upgradeForm.businessRegNumber}
+                         onChange={(e) => setUpgradeForm(prev => ({ ...prev, businessRegNumber: e.target.value }))}
+                         className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                         placeholder="Enter business registration number"
+                         required
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-neutral-700 mb-2">
+                         CAC Certificate *
+                       </label>
+                       <div className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center">
+                         <Upload className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
+                         <p className="text-sm text-neutral-600 mb-2">
+                           Upload your CAC certificate or business registration document
+                         </p>
+                         <input
+                           type="file"
+                           onChange={(e) => handleFileUpload(e, 'cacCertificate')}
+                           accept=".pdf,.jpg,.jpeg,.png"
+                           className="hidden"
+                           id="cac-certificate"
+                           required
+                         />
+                         <label
+                           htmlFor="cac-certificate"
+                           className="inline-block px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors cursor-pointer"
+                         >
+                           Choose File
+                         </label>
+                         {upgradeForm.cacCertificate && (
+                           <p className="text-sm text-green-600 mt-2">
+                             ✓ {upgradeForm.cacCertificate.name}
+                           </p>
+                         )}
+                       </div>
+                     </div>
+                   </>
+                 )}
 
                 <div className="flex space-x-4 pt-4">
                   <button

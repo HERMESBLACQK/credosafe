@@ -25,6 +25,18 @@ import Profile from './pages/Profile';
 import DeviceManagement from './pages/DeviceManagement';
 import WalletTransactions from './pages/WalletTransactions';
 import Withdraw from './pages/Withdraw';
+import FAQ from './pages/FAQ';
+
+// Landing Page Components
+import LandingPage from './pages/landingpage/LandingPage';
+import About from './pages/landingpage/About';
+import Contact from './pages/landingpage/Contact';
+import PrivacyPolicy from './pages/landingpage/PrivacyPolicy';
+import TermsOfService from './pages/landingpage/TermsOfService';
+import GiftCardVouchersLanding from './pages/landingpage/GiftCardVouchers';
+import PrepaidVouchersLanding from './pages/landingpage/PrepaidVouchers';
+import PurchaseEscrowVouchersLanding from './pages/landingpage/PurchaseEscrowVouchers';
+import WorkOrderVouchersLanding from './pages/landingpage/WorkOrderVouchers';
 
 // Components
 import PrivateRoute from './components/PrivateRoute';
@@ -49,12 +61,23 @@ function App() {
           <Router>
             <div className="App">
               <Routes>
-                {/* Public Routes */}
+                {/* Public Routes - Landing Page Base */}
+                <Route path="/" element={<Navigate to="/landingpage" />} />
+                <Route path="/landingpage" element={<LandingPage />} />
+                <Route path="/landingpage/about" element={<About />} />
+                <Route path="/landingpage/contact" element={<Contact />} />
+                <Route path="/landingpage/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/landingpage/terms-of-service" element={<TermsOfService />} />
+                <Route path="/landingpage/gift-card" element={<GiftCardVouchersLanding />} />
+                <Route path="/landingpage/prepaid" element={<PrepaidVouchersLanding />} />
+                <Route path="/landingpage/purchase-escrow" element={<PurchaseEscrowVouchersLanding />} />
+                <Route path="/landingpage/work-order" element={<WorkOrderVouchersLanding />} />
+                
+                {/* Auth Routes */}
                 <Route path="/signin" element={<SignIn />} />
                 <Route path="/signup" element={<SignUp />} />
                 
                 {/* Protected Routes */}
-                <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
                 <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
                 <Route path="/transactions" element={<PrivateRoute><Transactions /></PrivateRoute>} />
                 <Route path="/gift-card" element={<PrivateRoute><GiftCardVouchers /></PrivateRoute>} />
@@ -66,7 +89,7 @@ function App() {
                 <Route path="/voucher/:id" element={<PrivateRoute><VoucherPreview /></PrivateRoute>} />
                 <Route path="/tier" element={<PrivateRoute><Tier /></PrivateRoute>} />
                 <Route path="/change-password" element={<PrivateRoute><ChangePassword /></PrivateRoute>} />
-                <Route path="/redeem-voucher/:id" element={<PrivateRoute><RedeemVoucher /></PrivateRoute>} />
+                <Route path="/redeem-voucher" element={<PrivateRoute><RedeemVoucher /></PrivateRoute>} />
                 <Route path="/create-voucher" element={<PrivateRoute><CreateVoucher /></PrivateRoute>} />
                 <Route path="/wallet" element={<PrivateRoute><Wallet /></PrivateRoute>} />
                 <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
@@ -74,8 +97,10 @@ function App() {
                 <Route path="/device-management" element={<PrivateRoute><DeviceManagement /></PrivateRoute>} />
                 <Route path="/wallet-transactions" element={<PrivateRoute><WalletTransactions /></PrivateRoute>} />
                 <Route path="/withdraw" element={<PrivateRoute><Withdraw /></PrivateRoute>} />
+                <Route path="/faq" element={<PrivateRoute><FAQ /></PrivateRoute>} />
+                
                 {/* Fallback */}
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<Navigate to="/landingpage" replace />} />
               </Routes>
             </div>
           </Router>

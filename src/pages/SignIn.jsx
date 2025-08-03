@@ -15,6 +15,7 @@ import { storeLoginData } from '../store/slices/authSlice';
 import { showToast } from '../store/slices/uiSlice';
 import apiService from '../api/index';
 import { useLoading } from '../contexts/LoadingContext';
+import OTPModal from '../components/OTPModal'; // Added import for OTPModal
 
 const SignIn = () => {
   const dispatch = useDispatch();
@@ -31,6 +32,9 @@ const SignIn = () => {
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [otp, setOtp] = useState('');
   const [loginData, setLoginData] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showEmailVerificationModal, setShowEmailVerificationModal] = useState(false);
+  const [emailForVerification, setEmailForVerification] = useState('');
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -124,7 +128,10 @@ const SignIn = () => {
       return;
     }
 
+    if (isSubmitting) return; // Prevent multiple submissions
+
     try {
+      setIsSubmitting(true);
       startLoading('signin', 'Signing you in...');
       
       // Get device information silently (user doesn't know we're collecting this)
@@ -149,6 +156,14 @@ const SignIn = () => {
             message: 'Please check your email for the verification code', 
             type: 'info' 
           }));
+        } else if (response.data?.emailNotVerified) {
+          // User's email is not verified, show email verification modal
+          setEmailForVerification(formData.email);
+          setShowEmailVerificationModal(true);
+          dispatch(showToast({ 
+            message: 'Please verify your email address before signing in', 
+            type: 'warning' 
+          }));
         } else {
           // No 2FA required, proceed with login
           await completeLogin(response.data);
@@ -166,6 +181,7 @@ const SignIn = () => {
         type: 'error' 
       }));
     } finally {
+      setIsSubmitting(false);
       stopLoading('signin');
     }
   };
@@ -205,6 +221,64 @@ const SignIn = () => {
       }));
     } finally {
       stopLoading('otp');
+    }
+  };
+
+  const handleEmailVerificationOTP = async (otp) => {
+    try {
+      startLoading('email-verification', 'Verifying email...');
+      
+      const response = await apiService.auth.verifyOTP({
+        email: emailForVerification,
+        otp: otp
+      });
+      
+      if (response.success) {
+        setShowEmailVerificationModal(false);
+        dispatch(showToast({ 
+          message: 'Email verified successfully! You can now sign in.', 
+          type: 'success' 
+        }));
+        // Clear the form and let user try login again
+        setFormData({ email: '', password: '' });
+      } else {
+        dispatch(showToast({ 
+          message: response.error || response.message || 'Invalid verification code', 
+          type: 'error' 
+        }));
+      }
+    } catch (error) {
+      console.error('Email verification error:', error);
+      dispatch(showToast({ 
+        message: 'Email verification failed. Please try again.', 
+        type: 'error' 
+      }));
+    } finally {
+      stopLoading('email-verification');
+    }
+  };
+
+  const handleEmailVerificationResend = async (email) => {
+    try {
+      const response = await apiService.auth.resendOTP(email);
+      
+      if (response.success) {
+        dispatch(showToast({ 
+          message: 'New verification code sent to your email!', 
+          type: 'success' 
+        }));
+      } else {
+        dispatch(showToast({ 
+          message: response.error || 'Failed to resend verification code.', 
+          type: 'error' 
+        }));
+      }
+    } catch (error) {
+      console.error('Email verification resend error:', error);
+      dispatch(showToast({ 
+        message: 'Failed to resend verification code. Please try again.', 
+        type: 'error' 
+      }));
     }
   };
 
@@ -330,10 +404,10 @@ const SignIn = () => {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isSubmitting}
               className="w-full bg-primary-600 text-white py-3 px-4 rounded-lg hover:bg-primary-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   <span>Signing In...</span>
@@ -426,6 +500,19 @@ const SignIn = () => {
           </motion.div>
         </div>
       )}
+
+      {/* Email Verification Modal */}
+      <OTPModal
+        isOpen={showEmailVerificationModal}
+        onClose={() => setShowEmailVerificationModal(false)}
+        onVerify={handleEmailVerificationOTP}
+        onResend={handleEmailVerificationResend}
+        email={emailForVerification}
+        loading={checkLoading('email-verification')}
+        error={null}
+        title="Email Verification Required"
+        description="Please verify your email address before signing in. Enter the verification code sent to your email."
+      />
     </div>
   );
 };

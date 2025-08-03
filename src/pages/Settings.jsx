@@ -22,6 +22,7 @@ import { logoutUser, updateUser } from '../store/slices/authSlice';
 import { showToast } from '../store/slices/uiSlice';
 import apiService from '../api/index';
 import FloatingFooter from '../components/FloatingFooter';
+import ErrorMessage from '../components/ErrorMessage';
 import { useUser } from '../hooks/useUser';
 
 const Settings = () => {
@@ -40,6 +41,7 @@ const Settings = () => {
   });
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -155,8 +157,8 @@ const Settings = () => {
   // Fetch user devices
   const fetchDevices = async () => {
     try {
+      setError(null);
       console.log('🔍 Fetching devices...');
-      console.log('🔑 Auth token:', localStorage.getItem('token') ? 'Present' : 'Missing');
       
       const response = await apiService.auth.getDevices();
       console.log('📱 Devices response:', response);
@@ -168,15 +170,12 @@ const Settings = () => {
         console.log('📱 Devices set:', devices);
       } else {
         console.log('❌ Failed to fetch devices:', response.error);
+        setError(response.message || 'Failed to fetch devices');
         setDevices([]);
       }
     } catch (error) {
       console.error('Error fetching devices:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
+      setError('Failed to fetch devices. Please try again.');
       setDevices([]);
     }
   };
@@ -248,6 +247,12 @@ const Settings = () => {
           description: 'Upgrade your account for higher limits',
           type: 'navigation',
           action: () => navigate('/tier')
+        },
+        { 
+          label: 'FAQ & Support', 
+          description: 'Frequently asked questions and contact information',
+          type: 'navigation',
+          action: () => navigate('/faq')
         }
       ]
     },

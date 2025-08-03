@@ -42,6 +42,9 @@ const Wallet = () => {
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
+  const [currency, setCurrency] = useState('NGN');
+  const [usdToNgnRate, setUsdToNgnRate] = useState(null);
+  const [isLoadingRate, setIsLoadingRate] = useState(false);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -69,21 +72,59 @@ const Wallet = () => {
   const fetchRecentTransactions = async () => {
     try {
       setIsLoadingTransactions(true);
-      console.log('🔍 Fetching wallet transactions...');
-      console.log('🔍 apiService.payments:', apiService.payments);
-      console.log('🔍 apiService.payments.getWalletTransactions:', apiService.payments.getWalletTransactions);
-      
       const response = await apiService.payments.getWalletTransactions(1, 5);
-      console.log('📡 Wallet transactions response:', response);
-      
       if (response.success) {
         setRecentTransactions(response.data.transactions);
       }
     } catch (error) {
-      console.error('❌ Error fetching transactions:', error);
+      console.error('Error fetching transactions:', error);
       dispatch(showToast({ type: 'error', message: 'Failed to fetch transactions' }));
     } finally {
       setIsLoadingTransactions(false);
+    }
+  };
+
+  // Fetch USD/NGN rate
+  const fetchUsdToNgnRate = async () => {
+    try {
+      setIsLoadingRate(true);
+      // Use apiService if available, else use fetch with API_BASE_URL
+      let data;
+      try {
+        // Try using axios via apiService if available
+        if (apiService.rates && apiService.rates.getUsdToNgnRate) {
+          data = await apiService.rates.getUsdToNgnRate();
+        } else {
+          // fallback to fetch
+          const response = await fetch('/api/rates/usd-to-ngn');
+          data = await response.json();
+        }
+      } catch (err) {
+        // fallback to fetch if axios fails
+        const response = await fetch('/api/rates/usd-to-ngn');
+        data = await response.json();
+      }
+      console.log('USD/NGN rate server response:', data);
+      if (data && data.success) {
+        setUsdToNgnRate(data.rate);
+      } else {
+        setUsdToNgnRate(null);
+      }
+    } catch (error) {
+      // If the response is not JSON, handle gracefully
+      setUsdToNgnRate(null);
+      try {
+        const text = await error.response?.text?.();
+        if (text && text.startsWith('<!DOCTYPE')) {
+          console.error('Error fetching USD/NGN rate: Received HTML instead of JSON');
+        } else {
+          console.error('Error fetching USD/NGN rate:', error);
+        }
+      } catch (e) {
+        console.error('Error fetching USD/NGN rate:', error);
+      }
+    } finally {
+      setIsLoadingRate(false);
     }
   };
 
@@ -114,6 +155,13 @@ const Wallet = () => {
       }));
     }
   }, [searchParams, dispatch]);
+
+  // Fetch rate when modal opens or currency changes
+  useEffect(() => {
+    if (showFundModal && currency === 'USD') {
+      fetchUsdToNgnRate();
+    }
+  }, [showFundModal, currency]);
 
   const banks = [
     'Access Bank',
@@ -175,8 +223,8 @@ const Wallet = () => {
 
   const handleFundSubmit = async (e) => {
     e.preventDefault();
-    if (!fundAmount || parseFloat(fundAmount) < 100) {
-      dispatch(showToast({ type: 'error', message: 'Amount must be at least ₦100' }));
+    if (!fundAmount || parseFloat(fundAmount) < 1) {
+      dispatch(showToast({ type: 'error', message: `Amount must be at least ${currency === 'NGN' ? '₦100' : '$1'}` }));
       return;
     }
     if (!phone) {
@@ -188,11 +236,11 @@ const Wallet = () => {
       startGlobalLoading();
       const response = await apiService.payments.fundWallet({
         amount: parseFloat(fundAmount),
-        phone: phone
+        phone: phone,
+        currency: currency
       });
 
       if (response.success) {
-        // Redirect to Flutterwave checkout
         window.location.href = response.data.checkoutUrl;
       } else {
         dispatch(showToast({ type: 'error', message: response.message }));
@@ -361,27 +409,51 @@ const Wallet = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
             <form onSubmit={handleFundSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-2">
-                  Amount (₦)
+                  Currency
+                </label>
+                <select
+                  value={currency}
+                  onChange={e => setCurrency(e.target.value)}
+                  className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="NGN">NGN (₦)</option>
+                  <option value="USD">USD ($)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  Amount ({currency === 'NGN' ? '₦' : '$'})
                 </label>
                 <div className="relative">
                   <DollarSign className="w-5 h-5 text-neutral-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                   <input
                     type="number"
                     value={fundAmount}
-                    onChange={(e) => setFundAmount(e.target.value)}
+                    onChange={e => setFundAmount(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     placeholder="0.00"
-                    min="100"
+                    min={currency === 'NGN' ? 100 : 1}
                     step="0.01"
                     required
                   />
                 </div>
               </div>
-
+              {currency === 'USD' && (
+                <div className="text-sm text-neutral-600">
+                  {isLoadingRate && <span>Fetching rate...</span>}
+                  {!isLoadingRate && usdToNgnRate && (
+                    <>
+                      ≈ ₦{(parseFloat(fundAmount || 0) * usdToNgnRate).toLocaleString(undefined, { maximumFractionDigits: 2 })} (Rate: ₦{usdToNgnRate} per $1)
+                    </>
+                  )}
+                  {!isLoadingRate && usdToNgnRate === null && (
+                    <span className="text-red-500">Unable to fetch USD/NGN rate. Please try again later.</span>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-2">
                   Phone Number
@@ -391,14 +463,13 @@ const Wallet = () => {
                   <input
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={e => setPhone(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     placeholder="08012345678"
                     required
                   />
                 </div>
               </div>
-
               <div className="flex space-x-3 pt-4">
                 <button
                   type="button"

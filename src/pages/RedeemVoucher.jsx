@@ -66,8 +66,64 @@ const RedeemVoucher = () => {
     'Ecobank'
   ];
 
+  // Fetch user tier and limits
+  const fetchUserTier = async () => {
+    try {
+      const response = await apiService.auth.getTier();
+      if (response.success) {
+        try {
+          const tierResponse = await apiService.auth.getTierLimits(response.data.tier.level);
+          if (tierResponse.success) {
+            // setTierLimits(tierResponse.data); // This line was removed
+          } else {
+            // setTierLimits({ // This line was removed
+            //   daily_withdrawal_limit: 50000,
+            //   monthly_withdrawal_limit: 500000,
+            //   max_voucher_amount: 100000,
+            //   daily_limit: 1000000
+            // });
+          }
+        } catch (error) {
+          // setTierLimits({ // This line was removed
+          //   daily_withdrawal_limit: 50000,
+          //   monthly_withdrawal_limit: 500000,
+          //   max_voucher_amount: 100000,
+          //   daily_limit: 1000000
+          // });
+        }
+      } else {
+        if (response.status === 401 || response.status === 403) {
+          alert('Session expired or not authorized. Please log in again.');
+          window.location.href = '/signin';
+        } else {
+          // setUserTier(1); // This line was removed
+          // setTierLimits({ // This line was removed
+          //   daily_withdrawal_limit: 50000,
+          //   monthly_withdrawal_limit: 500000,
+          //   max_voucher_amount: 100000,
+          //   daily_limit: 1000000
+          // });
+        }
+      }
+    } catch (error) {
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        alert('Session expired or not authorized. Please log in again.');
+        window.location.href = '/signin';
+      } else {
+        // setUserTier(1); // This line was removed
+        // setTierLimits({ // This line was removed
+        //   daily_withdrawal_limit: 50000,
+        //   monthly_withdrawal_limit: 500000,
+        //   max_voucher_amount: 100000,
+        //   daily_limit: 1000000
+        // });
+      }
+    }
+  };
+
   useEffect(() => {
     console.log('🔍 RedeemVoucher useEffect triggered');
+    fetchUserTier();
     console.log('🔍 Location state:', location.state);
     
     if (location.state?.voucherData) {
@@ -85,7 +141,10 @@ const RedeemVoucher = () => {
       }
     } else {
       console.log('❌ No voucher data found, redirecting to redeem page');
-      navigate('/redeem');
+      // Add a small delay to ensure the component is mounted
+      setTimeout(() => {
+        navigate('/redeem');
+      }, 100);
     }
   }, [location.state, navigate]);
 

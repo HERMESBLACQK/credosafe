@@ -1,6 +1,13 @@
 import axios from 'axios';
 import { store } from '../store';
 import { logoutUser } from '../store/slices/authSlice';
+import { 
+  isSensitiveEndpoint, 
+  getSecurityHeaders, 
+  secureTokenStorage, 
+  clearSensitiveCache,
+  sanitizeForLogging 
+} from '../utils/security';
 
 // Dynamic API Configuration
 const getApiBaseUrl = () => {
@@ -14,12 +21,24 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 
-// Create axios instance with enhanced configuration
+// Create axios instance with enhanced security configuration
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000, // 30 seconds timeout
   headers: {
     'Content-Type': 'application/json',
+    // Security headers to prevent caching of sensitive data
+    'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+    // Prevent MIME type sniffing
+    'X-Content-Type-Options': 'nosniff',
+    // Prevent clickjacking
+    'X-Frame-Options': 'DENY',
+    // XSS protection
+    'X-XSS-Protection': '1; mode=block',
+    // Referrer policy
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
   },
   // Add these to fix CORS and header issues
   withCredentials: false,
@@ -28,7 +47,7 @@ const apiClient = axios.create({
   }
 });
 
-// Request interceptor for authentication and caching
+// Request interceptor for authentication and security
 apiClient.interceptors.request.use(
   (config) => {
     // Ensure headers object exists
@@ -36,10 +55,12 @@ apiClient.interceptors.request.use(
       config.headers = {};
     }
 
-    // Add auth token if available
-    const token = localStorage.getItem('token');
+    // Add auth token if available (but don't cache it)
+    const token = secureTokenStorage.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      // Add additional security for token requests
+      config.headers['X-Requested-With'] = 'XMLHttpRequest';
     }
 
     // Add device info for enhanced tracking (only if not already set)
@@ -53,8 +74,18 @@ apiClient.interceptors.request.use(
       });
     }
 
-    // Add cache control for GET requests
-    if (config.method === 'get' && config.cacheKey) {
+    // Force no-cache for sensitive endpoints
+    const isSensitive = isSensitiveEndpoint(config.url);
+
+    if (isSensitive) {
+      // Add security headers for sensitive endpoints
+      Object.assign(config.headers, getSecurityHeaders());
+      // Don't cache sensitive requests
+      config.cacheKey = null;
+    }
+
+    // Add cache control for non-sensitive GET requests only
+    if (config.method === 'get' && config.cacheKey && !isSensitive) {
       const cachedData = sessionStorage.getItem(`cache_${config.cacheKey}`);
       if (cachedData) {
         const { data, timestamp, ttl } = JSON.parse(cachedData);
@@ -82,8 +113,11 @@ apiClient.interceptors.request.use(
 // Response interceptor for error handling and caching
 apiClient.interceptors.response.use(
   (response) => {
-    // Cache successful GET responses
-    if (response.config.method === 'get' && response.config.cacheKey) {
+    // Sanitize sensitive data before logging
+    console.log('📡 API Response:', sanitizeForLogging(response.data));
+    
+    // Only cache non-sensitive GET responses
+    if (response.config.method === 'get' && response.config.cacheKey && !isSensitiveEndpoint(response.config.url)) {
       const cacheData = {
         data: response.data,
         timestamp: Date.now(),
@@ -115,6 +149,10 @@ apiClient.interceptors.response.use(
 
           if (refreshResponse.data.success) {
             localStorage.setItem('token', refreshResponse.data.token);
+            // Store new refresh token if provided
+            if (refreshResponse.data.refreshToken) {
+              localStorage.setItem('refreshToken', refreshResponse.data.refreshToken);
+            }
             originalRequest.headers.Authorization = `Bearer ${refreshResponse.data.token}`;
             return apiClient(originalRequest);
           }
@@ -261,6 +299,18 @@ const apiService = {
       }
     },
 
+    getTierLimits: async (tierLevel) => {
+      try {
+        const response = await apiClient.get(`/auth/tier-limits/${tierLevel}`, {
+          cacheKey: `tier_limits_${tierLevel}`,
+          cacheTtl: 3600000 // 1 hour
+        });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to fetch tier limits');
+      }
+    },
+
     upgradeTier: async (tierData) => {
       try {
         const response = await apiClient.post('/auth/upgrade-tier', tierData);
@@ -303,6 +353,7 @@ const apiService = {
 
   // Voucher endpoints
   vouchers: {
+    // Get all vouchers
     getAll: async () => {
       try {
         const response = await apiClient.get('/vouchers', {
@@ -312,6 +363,19 @@ const apiService = {
         return response.data;
       } catch (error) {
         throw new Error(error.response?.data?.message || 'Failed to fetch vouchers');
+      }
+    },
+
+    // Get all transactions (voucher creations and redemptions)
+    getTransactions: async (page = 1, limit = 50) => {
+      try {
+        const response = await apiClient.get(`/vouchers/transactions?page=${page}&limit=${limit}`, {
+          cacheKey: `vouchers_transactions_${page}`,
+          cacheTtl: 60000 // 1 minute
+        });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to fetch transactions');
       }
     },
 

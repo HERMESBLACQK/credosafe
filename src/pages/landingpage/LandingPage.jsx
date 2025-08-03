@@ -113,8 +113,8 @@ const LandingPage = () => {
             >
               <a href="#features" className="text-gray-600 hover:text-blue-600 transition-colors">Features</a>
               <a href="#vouchers" className="text-gray-600 hover:text-blue-600 transition-colors">Vouchers</a>
-              <a href="/about" className="text-gray-600 hover:text-blue-600 transition-colors">About</a>
-              <a href="/contact" className="text-gray-600 hover:text-blue-600 transition-colors">Contact</a>
+              <a href="/landingpage/about" className="text-gray-600 hover:text-blue-600 transition-colors">About</a>
+              <a href="/landingpage/contact" className="text-gray-600 hover:text-blue-600 transition-colors">Contact</a>
               
               {isAuthenticated ? (
                 <div className="flex items-center space-x-3">
@@ -395,19 +395,19 @@ const LandingPage = () => {
             <div>
               <h3 className="font-semibold mb-4">Company</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="/about" className="hover:text-white transition-colors">About</a></li>
-                <li><a href="/contact" className="hover:text-white transition-colors">Contact</a></li>
-                <li><a href="/contact" className="hover:text-white transition-colors">Support</a></li>
+                <li><a href="/landingpage/about" className="hover:text-white transition-colors">About</a></li>
+                <li><a href="/landingpage/contact" className="hover:text-white transition-colors">Contact</a></li>
+                <li><a href="/landingpage/contact" className="hover:text-white transition-colors">Support</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-4">Legal</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                <li><a href="/terms" className="hover:text-white transition-colors">Terms of Service</a></li>
-                <li><a href="/privacy" className="hover:text-white transition-colors">Cookie Policy</a></li>
-                <li><a href="/privacy" className="hover:text-white transition-colors">GDPR</a></li>
+                <li><a href="/landingpage/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="/landingpage/terms-of-service" className="hover:text-white transition-colors">Terms of Service</a></li>
+                <li><a href="/landingpage/privacy-policy" className="hover:text-white transition-colors">Cookie Policy</a></li>
+                <li><a href="/landingpage/privacy-policy" className="hover:text-white transition-colors">GDPR</a></li>
               </ul>
             </div>
           </div>
