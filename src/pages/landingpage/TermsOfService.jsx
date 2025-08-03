@@ -1,8 +1,20 @@
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
-import { Shield, FileText, Scale, AlertTriangle, CheckCircle, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Shield, 
+  ArrowLeft,
+  FileText,
+  Users,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Globe
+} from 'lucide-react';
 
 const TermsOfService = () => {
+  const navigate = useNavigate();
+
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
     animate: { opacity: 1, y: 0 },
@@ -41,7 +53,7 @@ const TermsOfService = () => {
       ]
     },
     {
-      icon: <Scale className="w-6 h-6" />,
+      icon: <Users className="w-6 h-6" />,
       title: "User Responsibilities",
       content: [
         "Provide accurate and complete information",
@@ -74,7 +86,7 @@ const TermsOfService = () => {
       ]
     },
     {
-      icon: <Shield className="w-6 h-6" />,
+      icon: <Clock className="w-6 h-6" />,
       title: "Dispute Resolution",
       content: [
         "Users must attempt to resolve disputes directly first",
@@ -82,6 +94,16 @@ const TermsOfService = () => {
         "Escrow funds are held until resolution is reached",
         "We may freeze accounts during investigation",
         "Final decisions are binding on all parties"
+      ]
+    },
+    {
+      icon: <Globe className="w-6 h-6" />,
+      title: "International Services",
+      content: [
+        "CredoSafe operates globally and supports multiple currencies",
+        "Our platform is available in multiple languages",
+        "All transactions are processed securely and in accordance with local regulations",
+        "We are committed to providing a secure and reliable service to users worldwide"
       ]
     }
   ];
@@ -101,12 +123,12 @@ const TermsOfService = () => {
               <span className="text-xl font-bold text-gray-900">CredoSafe</span>
             </motion.div>
             <motion.a 
-              href="/landingpage"
+              onClick={() => navigate('/')}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
+              className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors cursor-pointer"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5" />
               <span>Back to Home</span>
             </motion.a>
           </div>
@@ -233,8 +255,8 @@ const TermsOfService = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-gray-400">
             &copy; 2024 CredoSafe. All rights reserved. | 
-            <a href="/landingpage/privacy-policy" className="text-blue-400 hover:text-blue-300 ml-2">Privacy Policy</a> | 
-            <a href="/landingpage/terms-of-service" className="text-blue-400 hover:text-blue-300 ml-2">Terms of Service</a>
+            <a href="/privacy" className="text-blue-400 hover:text-blue-300 ml-2">Privacy Policy</a> | 
+            <a href="/terms" className="text-blue-400 hover:text-blue-300 ml-2">Terms of Service</a>
           </p>
         </div>
       </footer>

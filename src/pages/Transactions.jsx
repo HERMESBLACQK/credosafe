@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useState, useEffect } from 'react';
+import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { fetchVouchers } from '../store/slices/voucherSlice';
 import apiService from '../api/index';
@@ -39,7 +39,6 @@ const Transactions = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user, userProfile, isUserLoaded } = useUser();
-  const { vouchers = [] } = useSelector((state) => state.vouchers);
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
@@ -53,11 +52,6 @@ const Transactions = () => {
   // New state for transactions
   const [transactions, setTransactions] = useState([]);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
-  const [transactionSummary, setTransactionSummary] = useState({
-    totalCreations: 0,
-    totalRedemptions: 0,
-    totalTransactions: 0
-  });
 
   useEffect(() => {
     dispatch(fetchVouchers());
@@ -89,9 +83,8 @@ const Transactions = () => {
         console.log('📊 Transactions response:', response);
         
         if (response.success) {
-          setTransactions(response.data.transactions || []);
-          setTransactionSummary(response.data.summary || {});
-          console.log('✅ Transactions loaded:', response.data.transactions?.length);
+          setTransactions(response.data || []);
+          console.log('✅ Transactions loaded:', response.data?.length);
         } else {
           console.error('❌ Failed to fetch transactions:', response.message);
           setTransactions([]);
@@ -319,7 +312,7 @@ const Transactions = () => {
               <div className="text-center">
                 <p className="text-sm text-neutral-600 mb-1">Total Transactions</p>
                 <p className="text-2xl font-bold text-blue-600">
-                  {transactionSummary.totalTransactions}
+                  {transactions.length}
                 </p>
               </div>
             </div>
@@ -327,11 +320,11 @@ const Transactions = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div className="text-center">
                   <p className="text-neutral-600">Voucher Creations</p>
-                  <p className="font-semibold text-red-600">{transactionSummary.totalCreations}</p>
+                  <p className="font-semibold text-red-600">{transactions.filter(t => t.type === 'debit').length}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-neutral-600">Voucher Redemptions</p>
-                  <p className="font-semibold text-green-600">{transactionSummary.totalRedemptions}</p>
+                  <p className="font-semibold text-green-600">{transactions.filter(t => t.type === 'credit').length}</p>
                 </div>
               </div>
             </div>

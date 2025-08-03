@@ -61,7 +61,7 @@ function App() {
           <Router>
             <div className="App">
               <Routes>
-                {/* Public Routes - Landing Page Base */}
+                {/* Public Landing Page Routes */}
                 <Route path="/" element={<Navigate to="/landingpage" />} />
                 <Route path="/landingpage" element={<LandingPage />} />
                 <Route path="/landingpage/about" element={<About />} />

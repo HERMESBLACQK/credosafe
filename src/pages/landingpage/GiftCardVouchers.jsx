@@ -1,5 +1,6 @@
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   Gift, 
   CheckCircle, 
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react';
 
 const GiftCardVouchers = () => {
+  const navigate = useNavigate();
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
     animate: { opacity: 1, y: 0 },
@@ -104,12 +106,12 @@ const GiftCardVouchers = () => {
               <span className="text-xl font-bold text-gray-900">Gift Card Vouchers</span>
             </motion.div>
             <motion.a 
-              href="/landingpage"
+              onClick={() => navigate('/')}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
+              className="flex items-center space-x-2 text-gray-600 hover:text-pink-600 transition-colors cursor-pointer"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5" />
               <span>Back to Home</span>
             </motion.a>
           </div>
@@ -139,11 +141,17 @@ const GiftCardVouchers = () => {
                 and deliver digital gift cards that can be redeemed anywhere.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button className="bg-pink-600 text-white px-8 py-4 rounded-lg hover:bg-pink-700 transition-all transform hover:scale-105 flex items-center justify-center space-x-2">
+                <button 
+                  onClick={() => navigate('/send-gift-card')}
+                  className="bg-pink-600 text-white px-8 py-4 rounded-lg hover:bg-pink-700 transition-all transform hover:scale-105 flex items-center justify-center space-x-2"
+                >
                   <span>Send Gift Card</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
-                <button className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg hover:border-pink-600 hover:text-pink-600 transition-all">
+                <button 
+                  onClick={() => navigate('/gift-card-designs')}
+                  className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg hover:border-pink-600 hover:text-pink-600 transition-all"
+                >
                   View Designs
                 </button>
               </div>
@@ -349,6 +357,7 @@ const GiftCardVouchers = () => {
             whileInView="animate"
             viewport={{ once: true }}
             transition={{ delay: 0.4 }}
+            onClick={() => navigate('/send-gift-card')}
             className="bg-white text-pink-600 px-8 py-4 rounded-lg hover:bg-gray-100 transition-colors font-semibold flex items-center space-x-2 mx-auto"
           >
             <span>Send Gift Card</span>
@@ -362,8 +371,8 @@ const GiftCardVouchers = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-gray-400">
             &copy; 2024 CredoSafe. All rights reserved. | 
-            <a href="/landingpage/privacy-policy" className="text-blue-400 hover:text-blue-300 ml-2">Privacy Policy</a> | 
-            <a href="/landingpage/terms-of-service" className="text-blue-400 hover:text-blue-300 ml-2">Terms of Service</a>
+            <a href="/privacy" className="text-blue-400 hover:text-blue-300 ml-2">Privacy Policy</a> | 
+            <a href="/terms" className="text-blue-400 hover:text-blue-300 ml-2">Terms of Service</a>
           </p>
         </div>
       </footer>

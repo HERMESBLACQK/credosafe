@@ -369,7 +369,7 @@ const apiService = {
     // Get all transactions (voucher creations and redemptions)
     getTransactions: async (page = 1, limit = 50) => {
       try {
-        const response = await apiClient.get(`/vouchers/transactions?page=${page}&limit=${limit}`, {
+        const response = await apiClient.get(`/vouchers/transactions`, {
           cacheKey: `vouchers_transactions_${page}`,
           cacheTtl: 60000 // 1 minute
         });

@@ -113,8 +113,18 @@ const LandingPage = () => {
             >
               <a href="#features" className="text-gray-600 hover:text-blue-600 transition-colors">Features</a>
               <a href="#vouchers" className="text-gray-600 hover:text-blue-600 transition-colors">Vouchers</a>
-              <a href="/landingpage/about" className="text-gray-600 hover:text-blue-600 transition-colors">About</a>
-              <a href="/landingpage/contact" className="text-gray-600 hover:text-blue-600 transition-colors">Contact</a>
+              <button 
+                onClick={() => navigate('/landingpage/about')}
+                className="text-gray-600 hover:text-blue-600 transition-colors"
+              >
+                About
+              </button>
+              <button 
+                onClick={() => navigate('/landingpage/contact')}
+                className="text-gray-600 hover:text-blue-600 transition-colors"
+              >
+                Contact
+              </button>
               
               {isAuthenticated ? (
                 <div className="flex items-center space-x-3">
@@ -145,7 +155,7 @@ const LandingPage = () => {
                   >
                     <UserPlus className="w-4 h-4" />
                     <span>Sign Up</span>
-              </button>
+                  </button>
                 </div>
               )}
             </motion.div>
@@ -313,10 +323,16 @@ const LandingPage = () => {
                     </li>
                   ))}
                 </ul>
-                <a href={`/${voucher.title.toLowerCase().replace(/\s+/g, '-').replace('vouchers', 'vouchers')}`} className={`mt-6 bg-gradient-to-r ${voucher.color} text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity flex items-center space-x-2 inline-block`}>
+                <button 
+                  onClick={() => {
+                    const route = voucher.title.toLowerCase().replace(/\s+/g, '-').replace('vouchers', 'vouchers');
+                    navigate(`/landingpage/${route}`);
+                  }}
+                  className={`mt-6 bg-gradient-to-r ${voucher.color} text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity flex items-center space-x-2 inline-block`}
+                >
                   <span>Learn More</span>
                   <ArrowRight className="w-4 h-4" />
-                </a>
+                </button>
               </motion.div>
             ))}
           </motion.div>
@@ -395,19 +411,19 @@ const LandingPage = () => {
             <div>
               <h3 className="font-semibold mb-4">Company</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="/landingpage/about" className="hover:text-white transition-colors">About</a></li>
-                <li><a href="/landingpage/contact" className="hover:text-white transition-colors">Contact</a></li>
-                <li><a href="/landingpage/contact" className="hover:text-white transition-colors">Support</a></li>
+                <li><a href="/about" className="hover:text-white transition-colors">About</a></li>
+                <li><a href="/contact" className="hover:text-white transition-colors">Contact</a></li>
+                <li><a href="/contact" className="hover:text-white transition-colors">Support</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-4">Legal</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="/landingpage/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                <li><a href="/landingpage/terms-of-service" className="hover:text-white transition-colors">Terms of Service</a></li>
-                <li><a href="/landingpage/privacy-policy" className="hover:text-white transition-colors">Cookie Policy</a></li>
-                <li><a href="/landingpage/privacy-policy" className="hover:text-white transition-colors">GDPR</a></li>
+                <li><a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="/terms" className="hover:text-white transition-colors">Terms of Service</a></li>
+                <li><a href="/privacy" className="hover:text-white transition-colors">Cookie Policy</a></li>
+                <li><a href="/privacy" className="hover:text-white transition-colors">GDPR</a></li>
               </ul>
             </div>
           </div>

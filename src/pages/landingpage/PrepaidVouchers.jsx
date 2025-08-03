@@ -1,21 +1,21 @@
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   CreditCard, 
   CheckCircle, 
-  Store, 
   Zap, 
   DollarSign, 
   Users,
   ArrowRight,
   ArrowLeft,
-  ShoppingBag,
-  MapPin,
-  TrendingUp,
-  Smartphone
+  Building,
+  Globe,
+  Shield
 } from 'lucide-react';
 
 const PrepaidVouchers = () => {
+  const navigate = useNavigate();
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
     animate: { opacity: 1, y: 0 },
@@ -32,22 +32,22 @@ const PrepaidVouchers = () => {
 
   const features = [
     {
-      icon: <Store className="w-6 h-6" />,
+      icon: <Building className="w-6 h-6" />,
       title: "Business Network",
       description: "Use at thousands of participating businesses worldwide"
     },
     {
-      icon: <Zap className="w-6 h-6" />,
+      icon: <Globe className="w-6 h-6" />,
       title: "Instant Redemption",
       description: "Redeem instantly at point of sale with no delays"
     },
     {
-      icon: <DollarSign className="w-6 h-6" />,
+      icon: <Shield className="w-6 h-6" />,
       title: "Flexible Loading",
       description: "Load any amount from ₦1 to ₦10,000 per voucher"
     },
     {
-      icon: <Smartphone className="w-6 h-6" />,
+      icon: <DollarSign className="w-6 h-6" />,
       title: "Digital Wallet",
       description: "Store and manage multiple vouchers in your digital wallet"
     }
@@ -73,13 +73,13 @@ const PrepaidVouchers = () => {
       step: "2",
       title: "Find Businesses",
       description: "Discover participating businesses near you or online",
-      icon: <MapPin className="w-8 h-8" />
+      icon: <Building className="w-8 h-8" />
     },
     {
       step: "3",
       title: "Make Purchase",
       description: "Use your voucher at checkout like a regular payment method",
-      icon: <ShoppingBag className="w-8 h-8" />
+      icon: <Shield className="w-8 h-8" />
     },
     {
       step: "4",
@@ -104,12 +104,12 @@ const PrepaidVouchers = () => {
               <span className="text-xl font-bold text-gray-900">Prepaid Vouchers</span>
             </motion.div>
             <motion.a 
-              href="/landingpage"
+              onClick={() => navigate('/')}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
+              className="flex items-center space-x-2 text-gray-600 hover:text-purple-600 transition-colors cursor-pointer"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5" />
               <span>Back to Home</span>
             </motion.a>
           </div>
@@ -139,11 +139,17 @@ const PrepaidVouchers = () => {
                 no fees, and complete flexibility for your everyday purchases.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button className="bg-purple-600 text-white px-8 py-4 rounded-lg hover:bg-purple-700 transition-all transform hover:scale-105 flex items-center justify-center space-x-2">
+                <button 
+                  onClick={() => navigate('/create-voucher')}
+                  className="bg-purple-600 text-white px-8 py-4 rounded-lg hover:bg-purple-700 transition-all transform hover:scale-105 flex items-center justify-center space-x-2"
+                >
                   <span>Create Prepaid Voucher</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
-                <button className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg hover:border-purple-600 hover:text-purple-600 transition-all">
+                <button 
+                  onClick={() => navigate('/find-businesses')}
+                  className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg hover:border-purple-600 hover:text-purple-600 transition-all"
+                >
                   Find Businesses
                 </button>
               </div>
@@ -300,15 +306,15 @@ const PrepaidVouchers = () => {
               <h3 className="text-2xl font-bold mb-6">Perfect For</h3>
               <div className="space-y-4">
                 <div className="flex items-center space-x-3">
-                  <Store className="w-6 h-6" />
+                  <Building className="w-6 h-6" />
                   <span>Retail Shopping</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <ShoppingBag className="w-6 h-6" />
+                  <Shield className="w-6 h-6" />
                   <span>Online Purchases</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <TrendingUp className="w-6 h-6" />
+                  <DollarSign className="w-6 h-6" />
                   <span>Budget Management</span>
                 </div>
                 <div className="flex items-center space-x-3">
@@ -349,6 +355,7 @@ const PrepaidVouchers = () => {
             whileInView="animate"
             viewport={{ once: true }}
             transition={{ delay: 0.4 }}
+            onClick={() => navigate('/create-voucher')}
             className="bg-white text-purple-600 px-8 py-4 rounded-lg hover:bg-gray-100 transition-colors font-semibold flex items-center space-x-2 mx-auto"
           >
             <span>Create Prepaid Voucher</span>
@@ -362,8 +369,8 @@ const PrepaidVouchers = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-gray-400">
             &copy; 2024 CredoSafe. All rights reserved. | 
-            <a href="/landingpage/privacy-policy" className="text-blue-400 hover:text-blue-300 ml-2">Privacy Policy</a> | 
-            <a href="/landingpage/terms-of-service" className="text-blue-400 hover:text-blue-300 ml-2">Terms of Service</a>
+            <a href="/privacy" className="text-blue-400 hover:text-blue-300 ml-2">Privacy Policy</a> | 
+            <a href="/terms" className="text-blue-400 hover:text-blue-300 ml-2">Terms of Service</a>
           </p>
         </div>
       </footer>

@@ -1,7 +1,20 @@
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
-import { Shield, Lock, Eye, Database, Users, Globe, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Shield, 
+  ArrowLeft,
+  Lock,
+  Eye,
+  FileText,
+  Users,
+  Globe,
+  Calendar
+} from 'lucide-react';
 
 const PrivacyPolicy = () => {
+  const navigate = useNavigate();
+
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
     animate: { opacity: 1, y: 0 },
@@ -18,7 +31,7 @@ const PrivacyPolicy = () => {
 
   const sections = [
     {
-      icon: <Database className="w-6 h-6" />,
+      icon: <FileText className="w-6 h-6" />,
       title: "Information We Collect",
       content: [
         "Personal information (name, email, phone number)",
@@ -73,7 +86,7 @@ const PrivacyPolicy = () => {
       ]
     },
     {
-      icon: <Shield className="w-6 h-6" />,
+      icon: <Calendar className="w-6 h-6" />,
       title: "Your Rights",
       content: [
         "Access your personal information",
@@ -100,12 +113,12 @@ const PrivacyPolicy = () => {
               <span className="text-xl font-bold text-gray-900">CredoSafe</span>
             </motion.div>
             <motion.a 
-              href="/landingpage"
+              onClick={() => navigate('/')}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
+              className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors cursor-pointer"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5" />
               <span>Back to Home</span>
             </motion.a>
           </div>
@@ -205,8 +218,8 @@ const PrivacyPolicy = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-gray-400">
             &copy; 2024 CredoSafe. All rights reserved. | 
-            <a href="/landingpage/privacy-policy" className="text-blue-400 hover:text-blue-300 ml-2">Privacy Policy</a> | 
-            <a href="/landingpage/terms-of-service" className="text-blue-400 hover:text-blue-300 ml-2">Terms of Service</a>
+            <a href="/privacy" className="text-blue-400 hover:text-blue-300 ml-2">Privacy Policy</a> | 
+            <a href="/terms" className="text-blue-400 hover:text-blue-300 ml-2">Terms of Service</a>
           </p>
         </div>
       </footer>

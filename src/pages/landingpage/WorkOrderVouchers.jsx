@@ -1,20 +1,22 @@
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   Handshake, 
   CheckCircle, 
-  Clock, 
-  Shield, 
+  Calendar, 
   DollarSign, 
   Users,
   ArrowRight,
   ArrowLeft,
   FileText,
-  Calendar,
-  TrendingUp
+  Clock,
+  Target
 } from 'lucide-react';
 
 const WorkOrderVouchers = () => {
+  const navigate = useNavigate();
+
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
     animate: { opacity: 1, y: 0 },
@@ -36,7 +38,7 @@ const WorkOrderVouchers = () => {
       description: "Release funds at specific project milestones to ensure progress"
     },
     {
-      icon: <Shield className="w-6 h-6" />,
+      icon: <Target className="w-6 h-6" />,
       title: "Escrow Protection",
       description: "Funds held securely until work is completed and verified"
     },
@@ -72,13 +74,13 @@ const WorkOrderVouchers = () => {
       step: "2",
       title: "Fund Escrow",
       description: "Client funds the voucher which is held securely in escrow",
-      icon: <Shield className="w-8 h-8" />
+      icon: <Target className="w-8 h-8" />
     },
     {
       step: "3",
       title: "Work Progress",
       description: "Service provider completes work and submits for review",
-      icon: <TrendingUp className="w-8 h-8" />
+      icon: <Clock className="w-8 h-8" />
     },
     {
       step: "4",
@@ -103,12 +105,12 @@ const WorkOrderVouchers = () => {
               <span className="text-xl font-bold text-gray-900">Work Order Vouchers</span>
             </motion.div>
             <motion.a 
-              href="/landingpage"
+              onClick={() => navigate('/')}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
+              className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors cursor-pointer"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5" />
               <span>Back to Home</span>
             </motion.a>
           </div>
@@ -138,11 +140,17 @@ const WorkOrderVouchers = () => {
                 with our escrow system and completion verification.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition-all transform hover:scale-105 flex items-center justify-center space-x-2">
+                <button 
+                  onClick={() => navigate('/create-work-order')}
+                  className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition-all transform hover:scale-105 flex items-center justify-center space-x-2"
+                >
                   <span>Create Work Order</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
-                <button className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg hover:border-blue-600 hover:text-blue-600 transition-all">
+                <button 
+                  onClick={() => navigate('/learn-more')}
+                  className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg hover:border-blue-600 hover:text-blue-600 transition-all"
+                >
                   Learn More
                 </button>
               </div>
@@ -307,11 +315,11 @@ const WorkOrderVouchers = () => {
                   <span>Project-Based Work</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <TrendingUp className="w-6 h-6" />
+                  <Clock className="w-6 h-6" />
                   <span>Service Providers</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Shield className="w-6 h-6" />
+                  <Target className="w-6 h-6" />
                   <span>High-Value Projects</span>
                 </div>
               </div>
@@ -348,6 +356,7 @@ const WorkOrderVouchers = () => {
             whileInView="animate"
             viewport={{ once: true }}
             transition={{ delay: 0.4 }}
+            onClick={() => navigate('/create-work-order')}
             className="bg-white text-blue-600 px-8 py-4 rounded-lg hover:bg-gray-100 transition-colors font-semibold flex items-center space-x-2 mx-auto"
           >
             <span>Create Work Order Voucher</span>
@@ -361,8 +370,8 @@ const WorkOrderVouchers = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-gray-400">
             &copy; 2024 CredoSafe. All rights reserved. | 
-            <a href="/landingpage/privacy-policy" className="text-blue-400 hover:text-blue-300 ml-2">Privacy Policy</a> | 
-            <a href="/landingpage/terms-of-service" className="text-blue-400 hover:text-blue-300 ml-2">Terms of Service</a>
+            <a href="/privacy" className="text-blue-400 hover:text-blue-300 ml-2">Privacy Policy</a> | 
+            <a href="/terms" className="text-blue-400 hover:text-blue-300 ml-2">Terms of Service</a>
           </p>
         </div>
       </footer>
