@@ -219,7 +219,7 @@ const WorkOrderVouchers = () => {
           setUserBalance(balanceResponse.data?.balance || 0);
         }
         // Navigate to vouchers list or dashboard
-        navigate('/my-vouchers');
+        navigate('/dashbaord');
       } else {
         dispatch(showToast({
           message: response.message || 'Failed to create voucher',

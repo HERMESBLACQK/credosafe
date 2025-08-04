@@ -127,7 +127,7 @@ const PurchaseEscrowVouchers = () => {
           setUserBalance(balanceResponse.data?.balance || 0);
         }
         // Navigate to vouchers list or dashboard
-        navigate('/my-vouchers');
+        navigate('/dashboard');
       } else {
         dispatch(showToast({
           message: response.message || 'Failed to create voucher',
