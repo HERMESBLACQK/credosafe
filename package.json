@@ -3,13 +3,13 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://yourusername.github.io/credosafe",
+  "homepage": "https://credosafe.onrender.com",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "start": "vite preview --host 0.0.0.0 --port $PORT",
+    "lint": "eslint .",
     "preview": "vite preview",
-    "keep-alive": "node keep-alive.js",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },

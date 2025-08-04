@@ -26,6 +26,7 @@ import DeviceManagement from './pages/DeviceManagement';
 import WalletTransactions from './pages/WalletTransactions';
 import Withdraw from './pages/Withdraw';
 import FAQ from './pages/FAQ';
+import Referral from './pages/Referral';
 
 // Landing Page Components
 import LandingPage from './pages/landingpage/LandingPage';
@@ -98,6 +99,7 @@ function App() {
                 <Route path="/wallet-transactions" element={<PrivateRoute><WalletTransactions /></PrivateRoute>} />
                 <Route path="/withdraw" element={<PrivateRoute><Withdraw /></PrivateRoute>} />
                 <Route path="/faq" element={<PrivateRoute><FAQ /></PrivateRoute>} />
+                <Route path="/referral" element={<PrivateRoute><Referral /></PrivateRoute>} />
                 
                 {/* Fallback */}
                 <Route path="*" element={<Navigate to="/landingpage" replace />} />

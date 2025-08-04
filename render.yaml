@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: credosafe-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_API_URL
+        value: https://credosafe-server.onrender.com/api
+    healthCheckPath: /
+    autoDeploy: true 

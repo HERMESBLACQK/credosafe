@@ -707,4 +707,22 @@ const apiService = {
   }
 };
 
+// Referral API methods
+export const referralAPI = {
+  // Get user's referral statistics
+  getStats: () => apiClient.get('/referrals/stats'),
+  
+  // Validate referral code
+  validateCode: (referralCode) => apiClient.post('/referrals/validate', { referralCode }),
+  
+  // Get referral settings
+  getSettings: () => apiClient.get('/referrals/settings'),
+  
+  // Get user's referral earnings
+  getEarnings: (page = 1, limit = 20) => apiClient.get(`/referrals/earnings?page=${page}&limit=${limit}`),
+  
+  // Get referred users
+  getReferredUsers: (page = 1, limit = 20) => apiClient.get(`/referrals/referred-users?page=${page}&limit=${limit}`)
+};
+
 export default apiService; 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
   Shield, 
@@ -19,14 +19,15 @@ import { useLoading } from '../contexts/LoadingContext';
 const SignUp = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { isLoading } = useSelector((state) => state.auth);
+  // const { isLoading } = useSelector((state) => state.auth); // Remove unused variable
 
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    referredBy: '' // Add referredBy field
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -100,15 +101,16 @@ const SignUp = () => {
       setIsSubmitting(true);
       startLoading('signup', 'Creating your account...');
       // Prepare user data for registration
-      const userData = {
+      const payload = {
         first_name: formData.firstName,
         last_name: formData.lastName,
         email: formData.email,
-        password: formData.password
+        password: formData.password,
+        referred_by: formData.referredBy?.trim() || undefined
       };
 
       // Call registration API
-      const response = await apiService.auth.register(userData);
+      const response = await apiService.auth.register(payload);
       
       if (response.success) {
         console.log('📝 Registration response:', response);
@@ -384,6 +386,27 @@ const SignUp = () => {
               </div>
               {errors.confirmPassword && (
                 <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+              )}
+            </div>
+
+            {/* Referral Code */}
+            <div className="mb-4">
+              <label htmlFor="referredBy" className="block text-sm font-medium text-neutral-700 mb-2">
+                Referral Code (optional)
+              </label>
+              <input
+                id="referredBy"
+                name="referredBy"
+                type="text"
+                value={formData.referredBy}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                  errors.referredBy ? 'border-red-500' : 'border-neutral-300'
+                }`}
+                placeholder="Enter referral code if you have one"
+              />
+              {errors.referredBy && (
+                <p className="mt-1 text-sm text-red-600">{errors.referredBy}</p>
               )}
             </div>
 

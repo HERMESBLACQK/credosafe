@@ -16,7 +16,9 @@ import {
   ArrowRight,
   LogOut,
   Smartphone,
-  Monitor
+  Monitor,
+  Users,
+  Gift
 } from 'lucide-react';
 import { logoutUser, updateUser } from '../store/slices/authSlice';
 import { showToast } from '../store/slices/uiSlice';
@@ -359,6 +361,58 @@ const Settings = () => {
             <h1 className="text-3xl font-bold text-neutral-900 mb-2">Settings</h1>
             <p className="text-neutral-600">Manage your account preferences and security</p>
           </div>
+
+          {/* Account Section */}
+          <motion.div
+            variants={fadeInUp}
+            initial="initial"
+            animate="animate"
+            className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6"
+          >
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                <User className="w-5 h-5 mr-2 text-blue-600" />
+                Account
+              </h2>
+            </div>
+            <div className="divide-y divide-gray-200">
+              <div className="px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <User className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-900">Profile</p>
+                      <p className="text-sm text-gray-500">Manage your account information</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-gray-400" />
+                </div>
+              </div>
+              
+              {/* Referral Link */}
+              <div className="px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                      <Gift className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-900">Referral Program</p>
+                      <p className="text-sm text-gray-500">Earn rewards by inviting friends</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => navigate('/referral')}
+                    className="flex items-center text-gray-400 hover:text-gray-600"
+                  >
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
 
           <div className="space-y-6">
             {settingsSections.map((section, sectionIndex) => (
