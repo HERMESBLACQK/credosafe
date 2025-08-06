@@ -22,9 +22,11 @@ import apiService from '../api/index';
 import { useDispatch } from 'react-redux';
 import { showToast } from '../store/slices/toastSlice';
 import { useLoading } from '../contexts/LoadingContext';
+import useFeeSettings from '../hooks/useFeeSettings';
 
 const PrepaidVouchers = () => {
   const navigate = useNavigate();
+  const { fees, loading: feeLoading, error: feeError, calculateFee } = useFeeSettings();
   const dispatch = useDispatch();
   const [showBalance, setShowBalance] = useState(true);
   const [userBalance, setUserBalance] = useState(0);
@@ -94,12 +96,13 @@ const PrepaidVouchers = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Check if user has sufficient balance
     const voucherAmount = parseFloat(formData.voucherAmount) || 0;
-    if (userBalance < voucherAmount) {
+    const fee = calculateFee('voucher_creation', voucherAmount);
+    const totalWithFee = voucherAmount + fee;
+    // Check if user has sufficient balance for amount + fee
+    if (userBalance < totalWithFee) {
       dispatch(showToast({
-        message: `Insufficient balance. You need ₦${voucherAmount.toLocaleString()} but have ₦${userBalance.toLocaleString()}`,
+        message: `Insufficient balance. You need ₦${totalWithFee.toLocaleString()} (including ₦${fee.toLocaleString()} fee) but have ₦${userBalance.toLocaleString()}`,
         type: 'error'
       }));
       return;
@@ -127,13 +130,11 @@ const PrepaidVouchers = () => {
           message: 'Prepaid voucher created successfully!',
           type: 'success'
         }));
-        // Refresh balance
+        navigate('/dashboard');
         const balanceResponse = await apiService.vouchers.getBalance();
         if (balanceResponse.success) {
           setUserBalance(balanceResponse.data?.balance || 0);
         }
-        // Navigate to vouchers list or dashboard
-        navigate('/dashboard');
       } else {
         dispatch(showToast({
           message: response.message || 'Failed to create voucher',
@@ -231,14 +232,17 @@ const PrepaidVouchers = () => {
                         <DollarSign className="w-5 h-5 text-neutral-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                         <input
                           type="number"
+                          id="voucherAmount"
                           value={formData.voucherAmount}
-                          onChange={(e) => handleInputChange('voucherAmount', e.target.value)}
+                          onChange={e => handleInputChange('voucherAmount', e.target.value)}
                           className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                          placeholder="0.00"
-                          min="0"
-                          step="0.01"
+                          placeholder="Enter amount"
+                          min="1"
                           required
                         />
+                      </div>
+                      <div className="text-xs text-blue-700 mt-1">
+                        Fee: ₦{calculateFee('voucher_creation', parseFloat(formData.voucherAmount) || 0).toFixed(2)}
                       </div>
                     </div>
 
@@ -525,6 +529,10 @@ const PrepaidVouchers = () => {
                       <p className="text-3xl font-bold text-purple-600">
                         ₦{parseFloat(formData.voucherAmount) || 0}
                       </p>
+                      <p className="text-purple-700 mt-2 text-sm">
+                        Fee: ₦{feeLoading ? '...' : (calculateFee('voucher_creation', parseFloat(formData.voucherAmount) || 0)).toFixed(2)}
+                      </p>
+                      <p className="text-purple-600 text-xs">Total: ₦{feeLoading ? '...' : ((parseFloat(formData.voucherAmount) || 0) + calculateFee('voucher_creation', parseFloat(formData.voucherAmount) || 0)).toFixed(2)}</p>
                     </div>
 
                     <div className="border-b border-neutral-200 pb-4">
@@ -585,6 +593,6 @@ const PrepaidVouchers = () => {
       <FloatingFooter />
     </div>
   );
-};
+}
 
-export default PrepaidVouchers; 
+export default PrepaidVouchers;

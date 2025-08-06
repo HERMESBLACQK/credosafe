@@ -25,6 +25,7 @@ import { showToast } from '../store/slices/uiSlice';
 import apiService from '../api/index';
 import FloatingFooter from '../components/FloatingFooter';
 import ErrorMessage from '../components/ErrorMessage';
+import { useError } from '../contexts/ErrorContext';
 import { useUser } from '../hooks/useUser';
 
 const Settings = () => {

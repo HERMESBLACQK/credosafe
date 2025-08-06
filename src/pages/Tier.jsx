@@ -25,6 +25,7 @@ import apiService from '../api/index';
 import { showToast } from '../store/slices/uiSlice';
 import FloatingFooter from '../components/FloatingFooter';
 import { useSelector } from 'react-redux';
+import { useError } from '../contexts/ErrorContext';
 
 const Tier = () => {
   const navigate = useNavigate();

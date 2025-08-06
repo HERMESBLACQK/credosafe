@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { storeLoginData } from '../store/slices/authSlice';
 import { showToast } from '../store/slices/uiSlice';
+import { useError } from '../contexts/ErrorContext';
 import apiService from '../api/index';
 import { useLoading } from '../contexts/LoadingContext';
 import OTPModal from '../components/OTPModal'; // Added import for OTPModal
@@ -57,7 +58,7 @@ const SignIn = () => {
     }
   };
 
-  const getDeviceInfo = () => {
+  const getDeviceInfo = (location = null) => {
     const userAgent = navigator.userAgent;
     const platform = navigator.platform;
     const language = navigator.language;
@@ -91,7 +92,7 @@ const SignIn = () => {
     // Generate device name
     const deviceName = `${os} ${deviceType.charAt(0).toUpperCase() + deviceType.slice(1)}`;
     
-    return {
+    const deviceInfo = {
       deviceName,
       deviceType,
       browser,
@@ -102,6 +103,10 @@ const SignIn = () => {
       platform,
       userAgent
     };
+    if (location) {
+      deviceInfo.location = location;
+    }
+    return deviceInfo;
   };
 
   const validateForm = () => {
@@ -133,21 +138,41 @@ const SignIn = () => {
     try {
       setIsSubmitting(true);
       startLoading('signin', 'Signing you in...');
-      
-      // Get device information silently (user doesn't know we're collecting this)
-      const deviceInfo = getDeviceInfo();
-      
+
+      // Try to get device location
+      const getLocation = () => {
+        return new Promise((resolve) => {
+          if (!navigator.geolocation) {
+            resolve(null);
+          } else {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                resolve({
+                  latitude: pos.coords.latitude,
+                  longitude: pos.coords.longitude
+                });
+              },
+              (err) => {
+                resolve(null);
+              },
+              { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
+            );
+          }
+        });
+      };
+
+      const location = await getLocation();
+      const deviceInfo = getDeviceInfo(location);
+
       // Call login API with device information
       const loginPayload = {
         ...formData,
         deviceInfo
       };
-      
+
       const response = await apiService.auth.login(loginPayload);
-      
+
       if (response.success) {
-        console.log('📝 Login response:', response);
-        
         if (response.data?.requiresOTP) {
           // User has 2FA enabled, show OTP modal
           setLoginData(response.data);
@@ -386,14 +411,26 @@ const SignIn = () => {
                     errors.password ? 'border-red-500' : 'border-neutral-300'
                   }`}
                   placeholder="Enter your password"
+                  disabled={isSubmitting}
                 />
                 <Lock className="w-5 h-5 text-neutral-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-neutral-400 hover:text-primary-600 focus:outline-none"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              <div className="text-right mt-1">
+                <button
+                  type="button"
+                  className="text-primary-600 hover:underline text-sm font-medium"
+                  onClick={() => navigate('/landingpage/forgot-password')}
+                  tabIndex={0}
+                >
+                  Forgot password?
                 </button>
               </div>
               {errors.password && (

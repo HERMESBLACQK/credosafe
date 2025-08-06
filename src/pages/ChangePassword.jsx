@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import apiService from '../api/index';
 import { showToast } from '../store/slices/uiSlice';
+import { useError } from '../contexts/ErrorContext';
 import OTPModal from '../components/OTPModal';
 import FloatingFooter from '../components/FloatingFooter';
 
@@ -90,7 +91,6 @@ const ChangePassword = () => {
     try {
       setSendingOTP(true);
       const response = await apiService.auth.sendPasswordOTP();
-      
       if (response.success) {
         setShowOTPModal(true);
         dispatch(showToast({
@@ -99,14 +99,13 @@ const ChangePassword = () => {
         }));
       } else {
         dispatch(showToast({
-          message: response.error || 'Failed to send OTP',
+          message: response.message || 'Failed to send OTP',
           type: 'error'
         }));
       }
     } catch (error) {
-      console.error('❌ Send OTP error:', error);
       dispatch(showToast({
-        message: 'Failed to send OTP',
+        message: error.message || 'Failed to send OTP',
         type: 'error'
       }));
     } finally {
@@ -117,13 +116,7 @@ const ChangePassword = () => {
   const handleOTPVerify = async (otpValue) => {
     try {
       setLoading(true);
-      
-      console.log('🔐 Verifying OTP:', otpValue);
-      
       const response = await apiService.auth.verifyPasswordOTP(otpValue);
-      
-      console.log('📥 OTP verification response:', response);
-      
       if (response.success) {
         setOtp(otpValue);
         setOtpVerified(true);
@@ -134,14 +127,13 @@ const ChangePassword = () => {
         }));
       } else {
         dispatch(showToast({
-          message: response.error || 'Invalid OTP',
+          message: response.message || 'Invalid OTP',
           type: 'error'
         }));
       }
     } catch (error) {
-      console.error('❌ OTP verification error:', error);
       dispatch(showToast({
-        message: 'Failed to verify OTP',
+        message: error.message || 'Failed to verify OTP',
         type: 'error'
       }));
     } finally {
@@ -151,7 +143,6 @@ const ChangePassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!otpVerified) {
       dispatch(showToast({
         message: 'Please verify OTP first',
@@ -159,50 +150,40 @@ const ChangePassword = () => {
       }));
       return;
     }
-    
     if (!validateForm()) {
       return;
     }
-
     setLoading(true);
-    
     try {
       const response = await apiService.auth.changePassword({
         newPassword: formData.newPassword,
         confirmPassword: formData.confirmPassword
       });
-      
-      console.log('📥 Change password response:', response);
-      
       if (response.success) {
-      setSuccess(true);
-      setFormData({
-        newPassword: '',
-        confirmPassword: ''
-      });
+        setSuccess(true);
+        setFormData({
+          newPassword: '',
+          confirmPassword: ''
+        });
         setOtp('');
         setOtpVerified(false);
-        
         dispatch(showToast({
           message: 'Password changed successfully',
           type: 'success'
         }));
-      
-      // Reset success message after 3 seconds
-      setTimeout(() => {
-        setSuccess(false);
-        navigate('/settings');
-      }, 3000);
+        setTimeout(() => {
+          setSuccess(false);
+          navigate('/settings');
+        }, 3000);
       } else {
         dispatch(showToast({
-          message: response.error || 'Failed to change password',
+          message: response.message || 'Failed to change password',
           type: 'error'
         }));
       }
     } catch (error) {
-      console.error('❌ Change password error:', error);
       dispatch(showToast({
-        message: 'Failed to change password',
+        message: error.message || 'Failed to change password',
         type: 'error'
       }));
     } finally {

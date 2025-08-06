@@ -21,11 +21,14 @@ import {
 import FloatingFooter from '../components/FloatingFooter';
 import apiService from '../api/index';
 import { useDispatch } from 'react-redux';
-import { showToast } from '../store/slices/toastSlice';
+import { showToast } from '../store/slices/uiSlice';
+import { useError } from '../contexts/ErrorContext';
 import { useLoading } from '../contexts/LoadingContext';
+import useFeeSettings from '../hooks/useFeeSettings';
 
 const PurchaseEscrowVouchers = () => {
   const navigate = useNavigate();
+  const { fees, loading: feeLoading, error: feeError, calculateFee } = useFeeSettings();
   const dispatch = useDispatch();
   const [showBalance, setShowBalance] = useState(true);
   const [userBalance, setUserBalance] = useState(0);
@@ -82,17 +85,19 @@ const PurchaseEscrowVouchers = () => {
 
   const calculateTotal = () => {
     const value = parseFloat(formData.itemValue) || 0;
-    return value;
+    const fee = calculateFee('voucher_creation', value);
+    return value + fee;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Check if user has sufficient balance
-    const totalAmount = calculateTotal() + 500; // Item value + fixed fee
-    if (userBalance < totalAmount) {
+    const value = parseFloat(formData.itemValue) || 0;
+    const fee = calculateFee('voucher_creation', value);
+    const totalWithFee = value + fee;
+    // Check if user has sufficient balance for amount + fee
+    if (userBalance < totalWithFee) {
       dispatch(showToast({
-        message: `Insufficient balance. You need ₦${totalAmount.toLocaleString()} but have ₦${userBalance.toLocaleString()}`,
+        message: `Insufficient balance. You need ₦${totalWithFee.toLocaleString()} (including ₦${fee.toLocaleString()} fee) but have ₦${userBalance.toLocaleString()}`,
         type: 'error'
       }));
       return;
@@ -121,13 +126,13 @@ const PurchaseEscrowVouchers = () => {
           message: 'Purchase escrow voucher created successfully!',
           type: 'success'
         }));
-        // Refresh balance
+
+        navigate('/dashboard');
+
         const balanceResponse = await apiService.vouchers.getBalance();
         if (balanceResponse.success) {
           setUserBalance(balanceResponse.data?.balance || 0);
         }
-        // Navigate to vouchers list or dashboard
-        navigate('/dashboard');
       } else {
         dispatch(showToast({
           message: response.message || 'Failed to create voucher',
@@ -246,26 +251,25 @@ const PurchaseEscrowVouchers = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-2">
-                        Item Value *
-                      </label>
-                      <div className="relative">
-                        <DollarSign className="w-5 h-5 text-neutral-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                        <input
-                          type="number"
-                          value={formData.itemValue}
-                          onChange={(e) => handleInputChange('itemValue', e.target.value)}
-                          className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                          placeholder="0.00"
-                          min="0"
-                          step="0.01"
-                          required
-                        />
-                      </div>
-                    </div>
+  Item Value *
+</label>
+<div className="relative">
+  <DollarSign className="w-5 h-5 text-neutral-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+  <input
+    type="number"
+    id="itemValue"
+    value={formData.itemValue}
+    onChange={e => handleInputChange('itemValue', e.target.value)}
+    className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+    placeholder="Enter item value"
+    min="1"
+    required
+  />
+</div>
+<div className="text-xs text-blue-700 mt-1">
+  Fee: ₦{feeLoading ? '...' : calculateFee('voucher_creation', parseFloat(formData.itemValue) || 0).toFixed(2)}
+</div>
                   </div>
-
-                  {/* Seller Information */}
-                  <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-neutral-900">Seller Information</h3>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -538,13 +542,13 @@ const PurchaseEscrowVouchers = () => {
                         <span className="font-bold text-green-600">₦{parseFloat(formData.itemValue) || 0}</span>
                       </div>
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-neutral-600">Fixed Fee:</span>
-                        <span className="text-sm font-medium">₦500.00</span>
+                        <span className="text-sm text-neutral-600">Fee:</span>
+                        <span className="text-sm font-medium">₦{feeLoading ? '...' : (calculateFee('voucher_creation', parseFloat(formData.itemValue) || 0)).toFixed(2)}</span>
                       </div>
                       <div className="border-t border-neutral-200 pt-2">
                         <div className="flex justify-between items-center">
                           <span className="font-semibold text-neutral-900">Total:</span>
-                          <span className="text-lg font-bold text-green-600">₦{(parseFloat(formData.itemValue) || 0) + 500}</span>
+                          <span className="text-lg font-bold text-green-600">₦{feeLoading ? '...' : ((parseFloat(formData.itemValue) || 0) + calculateFee('voucher_creation', parseFloat(formData.itemValue) || 0)).toFixed(2)}</span>
                         </div>
                       </div>
                     </div>
@@ -576,6 +580,6 @@ const PurchaseEscrowVouchers = () => {
       <FloatingFooter />
     </div>
   );
-};
+}
 
-export default PurchaseEscrowVouchers; 
+export default PurchaseEscrowVouchers;

@@ -22,9 +22,11 @@ import apiService from '../api/index';
 import { useDispatch } from 'react-redux';
 import { showToast } from '../store/slices/toastSlice';
 import { useLoading } from '../contexts/LoadingContext';
+import useFeeSettings from '../hooks/useFeeSettings';
 
 const WorkOrderVouchers = () => {
   const navigate = useNavigate();
+  const { fees, loading: feeLoading, error: feeError, calculateFee } = useFeeSettings();
   const dispatch = useDispatch();
   const [selectedDesign, setSelectedDesign] = useState('professional');
   const [showBalance, setShowBalance] = useState(true);
@@ -155,17 +157,16 @@ const WorkOrderVouchers = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Check if user has sufficient balance
-    const totalAmount = calculateTotal();
-    if (userBalance < totalAmount) {
+    const amount = parseFloat(formData.totalAmount) || 0;
+    const fee = calculateFee('voucher_creation', amount);
+    const totalWithFee = amount + fee;
+    if (userBalance < totalWithFee) {
       dispatch(showToast({
-        message: `Insufficient balance. You need ₦${totalAmount.toLocaleString()} but have ₦${userBalance.toLocaleString()}`,
+        message: `Insufficient balance. You need ₦${totalWithFee.toLocaleString()} (including ₦${fee.toLocaleString()} fee) but have ₦${userBalance.toLocaleString()}`,
         type: 'error'
       }));
       return;
     }
-    
     try {
       startLoading('create-work-order', 'Creating work order...');
       // Validate milestones if payment type is milestone
@@ -213,13 +214,11 @@ const WorkOrderVouchers = () => {
           message: 'Work order voucher created successfully!',
           type: 'success'
         }));
-        // Refresh balance
+        navigate('/dashboard');
         const balanceResponse = await apiService.vouchers.getBalance();
         if (balanceResponse.success) {
           setUserBalance(balanceResponse.data?.balance || 0);
         }
-        // Navigate to vouchers list or dashboard
-        navigate('/dashbaord');
       } else {
         dispatch(showToast({
           message: response.message || 'Failed to create voucher',

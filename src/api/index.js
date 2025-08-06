@@ -250,10 +250,64 @@ const apiService = {
 
     verifyLoginOTP: async (otpData) => {
       try {
-        const response = await apiClient.post('/auth/verify-login-otp', otpData);
+        const response = await apiClient.post('/auth/verify-login-otp', otpData, { cacheKey: null }); // No cache for OTP
         return response.data;
       } catch (error) {
         throw new Error(error.response?.data?.message || 'Login OTP verification failed');
+      }
+    },
+
+    // --- Password Reset (Forgot Password) ---
+    requestPasswordReset: async (data) => {
+      try {
+        const response = await apiClient.post('/auth/request-password-reset', data, { cacheKey: null });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to request password reset');
+      }
+    },
+    verifyPasswordResetOtp: async (data) => {
+      try {
+        const response = await apiClient.post('/auth/verify-reset-otp', data, { cacheKey: null });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to verify OTP');
+      }
+    },
+    resetPassword: async (data) => {
+      try {
+        const response = await apiClient.post('/auth/reset-password', data, { cacheKey: null });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to reset password');
+      }
+    },
+
+    // --- Password Change (Authenticated User) ---
+    sendPasswordOTP: async () => {
+      try {
+        const response = await apiClient.post('/auth/send-password-otp', {}, { cacheKey: null });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to send OTP');
+      }
+    },
+
+    verifyPasswordOTP: async (otp) => {
+      try {
+        const response = await apiClient.post('/auth/verify-password-otp', { otp }, { cacheKey: null });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to verify OTP');
+      }
+    },
+
+    changePassword: async (data) => {
+      try {
+        const response = await apiClient.put('/auth/change-password', data, { cacheKey: null });
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to change password');
       }
     },
 
@@ -347,6 +401,18 @@ const apiService = {
         return response.data;
       } catch (error) {
         throw new Error(error.response?.data?.message || 'Failed to update settings');
+      }
+    }
+  },
+
+  // Public voucher endpoints (no auth)
+  publicVouchers: {
+    searchByCode: async (voucherCode) => {
+      try {
+        const response = await apiClient.get(`/public-vouchers/${voucherCode}`);
+        return response.data;
+      } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to search for voucher');
       }
     }
   },

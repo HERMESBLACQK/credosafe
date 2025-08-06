@@ -4,11 +4,13 @@ import { Shield, ArrowLeft, Eye, Download, Share2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import apiService from '../api/index';
 import { useDispatch } from 'react-redux';
-import { showToast } from '../store/slices/toastSlice';
+import { showToast } from '../store/slices/uiSlice';
+import { useError } from '../contexts/ErrorContext';
 
 const MyVouchers = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { showError, clearError } = useError();
   const [vouchers, setVouchers] = useState([]);
   const [loading, setLoading] = useState(true);
 

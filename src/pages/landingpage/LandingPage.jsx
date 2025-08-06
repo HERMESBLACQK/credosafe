@@ -23,7 +23,7 @@ import { showToast } from '../../store/slices/uiSlice';
 const LandingPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useSelector((state) => state.auth);
+  
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
     animate: { opacity: 1, y: 0 },
@@ -44,28 +44,32 @@ const LandingPage = () => {
       title: "Work Order Vouchers",
       description: "Create milestone-based or full payment vouchers for work orders. Redeem upon completion.",
       features: ["Milestone payments", "Full payment options", "Escrow protection", "Completion verification"],
-      color: "from-blue-500 to-blue-600"
+      color: "from-blue-500 to-blue-600",
+      path: "/landingpage/work-order-vouchers"
     },
     {
       icon: <Shield className="w-8 h-8" />,
       title: "Purchase Escrow Vouchers",
       description: "Secure transactions with escrow protection. Both parties must agree before release.",
       features: ["Escrow protection", "Dual approval", "Secure transactions", "Dispute resolution"],
-      color: "from-green-500 to-green-600"
+      color: "from-green-500 to-green-600",
+      path: "/landingpage/purchase-escrow-vouchers"
     },
     {
       icon: <CreditCard className="w-8 h-8" />,
       title: "Prepaid Vouchers",
       description: "Load funds and use at participating businesses. Instant redemption available.",
       features: ["Prepaid balance", "Business network", "Instant redemption", "Balance tracking"],
-      color: "from-purple-500 to-purple-600"
+      color: "from-purple-500 to-purple-600",
+      path: "/landingpage/prepaid-vouchers"
     },
     {
       icon: <Gift className="w-8 h-8" />,
       title: "Gift Card Vouchers",
       description: "Send anonymous or personalized gift cards. Flexible redemption options.",
       features: ["Anonymous sending", "Personalized messages", "Flexible amounts", "Digital delivery"],
-      color: "from-pink-500 to-pink-600"
+      color: "from-pink-500 to-pink-600",
+      path: "/landingpage/gift-card-vouchers"
     }
   ];
 
@@ -113,6 +117,12 @@ const LandingPage = () => {
             >
               <a href="#features" className="text-gray-600 hover:text-blue-600 transition-colors">Features</a>
               <a href="#vouchers" className="text-gray-600 hover:text-blue-600 transition-colors">Vouchers</a>
+              <button
+                onClick={() => navigate('/landingpage/redeem-public')}
+                className="text-gray-600 hover:text-blue-600 transition-colors"
+              >
+                Redeem
+              </button>
               <button 
                 onClick={() => navigate('/landingpage/about')}
                 className="text-gray-600 hover:text-blue-600 transition-colors"
@@ -125,39 +135,22 @@ const LandingPage = () => {
               >
                 Contact
               </button>
-              
-              {isAuthenticated ? (
-                <div className="flex items-center space-x-3">
-                  <span className="text-gray-600">Welcome, {user?.name}</span>
-                  <button 
-                    onClick={() => {
-                      dispatch(logoutUser());
-                      dispatch(showToast({ message: 'Logged out successfully', type: 'success' }));
-                    }}
-                    className="flex items-center space-x-2 text-gray-600 hover:text-red-600 transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Logout</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-3">
-                  <button 
-                    onClick={() => navigate('/signin')}
-                    className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
-                  >
-                    <LogIn className="w-4 h-4" />
-                    <span>Sign In</span>
-                  </button>
-                  <button 
-                    onClick={() => navigate('/signup')}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    <span>Sign Up</span>
-                  </button>
-                </div>
-              )}
+              <div className="flex items-center space-x-3">
+                <button 
+                  onClick={() => navigate('/signin')}
+                  className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Sign In</span>
+                </button>
+                <button 
+                  onClick={() => navigate('/signup')}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Sign Up</span>
+                </button>
+              </div>
             </motion.div>
           </div>
         </div>
@@ -196,21 +189,12 @@ const LandingPage = () => {
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
               <button 
-                onClick={() => {
-                  if (isAuthenticated) {
-                    // Navigate to dashboard for authenticated users
-                    navigate('/dashboard');
-                  } else {
-                    dispatch(showToast({ 
-                      message: 'Please sign in to access your dashboard', 
-                      type: 'info' 
-                    }));
-                    navigate('/signin');
-                  }
-                }}
+             onClick={() => {
+              navigate('/signin');
+            }}
                 className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition-all transform hover:scale-105 flex items-center justify-center space-x-2"
               >
-                <span>{isAuthenticated ? 'Create Voucher' : 'Get Started'}</span>
+                <span>{ 'Create Voucher'}</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg hover:border-blue-600 hover:text-blue-600 transition-all">
@@ -303,10 +287,11 @@ const LandingPage = () => {
             className="grid md:grid-cols-2 gap-8"
           >
             {voucherTypes.map((voucher, index) => (
-              <motion.div
+              <motion.div 
                 key={index}
                 variants={fadeInUp}
-                className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-2"
+                onClick={() => navigate(voucher.path)}
+                className={`bg-white p-8 rounded-2xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300 cursor-pointer`}
               >
                 <div className={`w-16 h-16 bg-gradient-to-r ${voucher.color} rounded-xl flex items-center justify-center mb-6`}>
                   <div className="text-white">
@@ -367,20 +352,10 @@ const LandingPage = () => {
             whileInView="animate"
             viewport={{ once: true }}
             transition={{ delay: 0.4 }}
-            onClick={() => {
-              if (isAuthenticated) {
-                navigate('/dashboard');
-              } else {
-                dispatch(showToast({ 
-                  message: 'Please sign in to access your dashboard', 
-                  type: 'info' 
-                }));
-                navigate('/signin');
-              }
-            }}
+            onClick={() => navigate('/signin')}
             className="bg-white text-blue-600 px-8 py-4 rounded-lg hover:bg-gray-100 transition-colors font-semibold flex items-center space-x-2 mx-auto"
           >
-            <span>{isAuthenticated ? 'Create Your First Voucher' : 'Get Started Today'}</span>
+            <span>Get Started Today</span>
             <ArrowRight className="w-5 h-5" />
           </motion.button>
         </div>

@@ -30,18 +30,23 @@ import Referral from './pages/Referral';
 
 // Landing Page Components
 import LandingPage from './pages/landingpage/LandingPage';
+import ForgotPassword from './pages/landingpage/ForgotPassword';
 import About from './pages/landingpage/About';
 import Contact from './pages/landingpage/Contact';
 import PrivacyPolicy from './pages/landingpage/PrivacyPolicy';
 import TermsOfService from './pages/landingpage/TermsOfService';
-import GiftCardVouchersLanding from './pages/landingpage/GiftCardVouchers';
-import PrepaidVouchersLanding from './pages/landingpage/PrepaidVouchers';
-import PurchaseEscrowVouchersLanding from './pages/landingpage/PurchaseEscrowVouchers';
-import WorkOrderVouchersLanding from './pages/landingpage/WorkOrderVouchers';
+import GiftCardVouchersLanding from './pages/landingpage/GiftCardVouchersPublic';
+import PrepaidVouchersLanding from './pages/landingpage/PrepaidVouchersPublic';
+import PurchaseEscrowVouchersLanding from './pages/landingpage/PurchaseEscrowVouchersPublic';
+import WorkOrderVouchersLanding from './pages/landingpage/WorkOrderVouchersPublic';
+import RedeemPublic from './pages/landingpage/RedeemPublic';
+import RedeemVoucherPublic from './pages/landingpage/RedeemVoucherPublic';
 
 // Components
 import PrivateRoute from './components/PrivateRoute';
 import { LoadingProvider } from './contexts/LoadingContext';
+import { ErrorProvider, useError } from './contexts/ErrorContext';
+import ErrorMessage from './components/ErrorMessage';
 
 // Enhanced loading component for persistence
 const PersistenceLoader = () => (
@@ -54,17 +59,32 @@ const PersistenceLoader = () => (
   </div>
 );
 
+function GlobalErrorDisplay() {
+  const { error, clearError } = useError();
+  if (!error) return null;
+  return (
+    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md w-full px-4">
+      <ErrorMessage message={error} onClose={clearError} />
+    </div>
+  );
+}
+
 function App() {
   return (
     <Provider store={store}>
       <PersistGate loading={<PersistenceLoader />} persistor={persistor}>
         <LoadingProvider>
-          <Router>
-            <div className="App">
-              <Routes>
+          <ErrorProvider>
+            <Router>
+              <GlobalErrorDisplay />
+              <div className="App">
+                <Routes>
+  <Route path="/landingpage/redeem-public" element={<RedeemPublic />} />
+  <Route path="/landingpage/redeem-voucher-public" element={<RedeemVoucherPublic />} />
                 {/* Public Landing Page Routes */}
                 <Route path="/" element={<Navigate to="/landingpage" />} />
                 <Route path="/landingpage" element={<LandingPage />} />
+                <Route path="/landingpage/forgot-password" element={<ForgotPassword />} />
                 <Route path="/landingpage/about" element={<About />} />
                 <Route path="/landingpage/contact" element={<Contact />} />
                 <Route path="/landingpage/privacy-policy" element={<PrivacyPolicy />} />
@@ -73,6 +93,10 @@ function App() {
                 <Route path="/landingpage/prepaid" element={<PrepaidVouchersLanding />} />
                 <Route path="/landingpage/purchase-escrow" element={<PurchaseEscrowVouchersLanding />} />
                 <Route path="/landingpage/work-order" element={<WorkOrderVouchersLanding />} />
+                <Route path="/landingpage/gift-card-vouchers" element={<GiftCardVouchersLanding />} />
+                <Route path="/landingpage/prepaid-vouchers" element={<PrepaidVouchersLanding />} />
+                <Route path="/landingpage/purchase-escrow-vouchers" element={<PurchaseEscrowVouchersLanding />} />
+                <Route path="/landingpage/work-order-vouchers" element={<WorkOrderVouchersLanding />} />
                 
                 {/* Auth Routes */}
                 <Route path="/signin" element={<SignIn />} />
@@ -106,9 +130,10 @@ function App() {
               </Routes>
             </div>
           </Router>
-        </LoadingProvider>
-      </PersistGate>
-    </Provider>
+        </ErrorProvider>
+      </LoadingProvider>
+    </PersistGate>
+  </Provider>
   );
 }
 

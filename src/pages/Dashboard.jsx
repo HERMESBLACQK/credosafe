@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLoading } from '../contexts/LoadingContext';
 import Loader from '../components/Loader';
 import { useUser } from '../hooks/useUser';
+import { useError } from '../contexts/ErrorContext';
 import { 
   Shield, 
   DollarSign, 

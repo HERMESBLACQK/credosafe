@@ -26,9 +26,12 @@ import {
 import FloatingFooter from '../components/FloatingFooter';
 import apiService from '../api';
 import { showToast } from '../store/slices/toastSlice';
+import { useError } from '../contexts/ErrorContext';
 import { useLoading } from '../contexts/LoadingContext';
+import useFeeSettings from '../hooks/useFeeSettings';
 
 const Wallet = () => {
+  const { fees, loading: feeLoading, error: feeError, calculateFee } = useFeeSettings();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const dispatch = useDispatch();
@@ -37,6 +40,11 @@ const Wallet = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [showFundModal, setShowFundModal] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
+
+  // Fee calculation for funding
+  const fundValue = parseFloat(fundAmount) || 0;
+  const fundFee = calculateFee('credit_fee', fundValue);
+  const fundTotal = fundValue + fundFee;
   const [phone, setPhone] = useState('');
   const [walletBalance, setWalletBalance] = useState(0);
   const [recentTransactions, setRecentTransactions] = useState([]);
@@ -439,6 +447,12 @@ const Wallet = () => {
                     step="0.01"
                     required
                   />
+                  <div className="text-xs text-blue-700 mt-1">
+                    Fee: ₦{feeLoading ? '...' : fundFee.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-blue-800 mt-1">
+                    Total: ₦{feeLoading ? '...' : fundTotal.toFixed(2)}
+                  </div>
                 </div>
               </div>
               {currency === 'USD' && (

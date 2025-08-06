@@ -14,6 +14,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import { useUser } from '../hooks/useUser';
+import { useError } from '../contexts/ErrorContext';
 import { referralAPI } from '../api';
 
 const Referral = () => {

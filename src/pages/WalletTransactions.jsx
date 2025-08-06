@@ -21,6 +21,7 @@ import {
 import FloatingFooter from '../components/FloatingFooter';
 import apiService from '../api';
 import { showToast } from '../store/slices/toastSlice';
+import { useError } from '../contexts/ErrorContext';
 
 const WalletTransactions = () => {
   const navigate = useNavigate();

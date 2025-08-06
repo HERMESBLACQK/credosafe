@@ -18,6 +18,7 @@ import {
 import apiService from '../api/index';
 import { updateUser } from '../store/slices/authSlice';
 import { showToast } from '../store/slices/uiSlice';
+import { useError } from '../contexts/ErrorContext';
 import FloatingFooter from '../components/FloatingFooter';
 import { useUser } from '../hooks/useUser';
 

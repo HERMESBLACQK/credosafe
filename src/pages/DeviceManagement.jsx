@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useError } from '../contexts/ErrorContext';
 import { 
   Shield, 
   ArrowLeft,

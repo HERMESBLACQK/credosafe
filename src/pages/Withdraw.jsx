@@ -18,10 +18,13 @@ import {
 import FloatingFooter from '../components/FloatingFooter';
 import apiService from '../api';
 import { showToast } from '../store/slices/toastSlice';
+import { useError } from '../contexts/ErrorContext';
 import { useLoading } from '../contexts/LoadingContext';
+import useFeeSettings from '../hooks/useFeeSettings';
 
 
 const Withdraw = () => {
+  const { fees, loading: feeLoading, error: feeError, calculateFee } = useFeeSettings();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { startGlobalLoading, stopGlobalLoading } = useLoading();
@@ -39,6 +42,11 @@ const Withdraw = () => {
     bankCode: '',
     accountName: ''
   });
+
+  // Fee calculation
+  const withdrawAmount = parseFloat(withdrawForm.amount) || 0;
+  const fee = calculateFee('debit_fee', withdrawAmount);
+  const totalWithFee = withdrawAmount + fee;
 
   // Custom dropdown state
   const [isBankDropdownOpen, setIsBankDropdownOpen] = useState(false);
@@ -195,7 +203,14 @@ const Withdraw = () => {
   // Handle withdrawal
   const handleWithdraw = async (e) => {
     e.preventDefault();
-    
+    // Check if user has sufficient balance for amount + fee
+    if (walletBalance < totalWithFee) {
+      dispatch(showToast({
+        message: `Insufficient balance. You need ₦${totalWithFee.toLocaleString()} (including ₦${fee.toLocaleString()} fee) but have ₦${walletBalance.toLocaleString()}`,
+        type: 'error'
+      }));
+      return;
+    }
     if (!withdrawForm.amount || parseFloat(withdrawForm.amount) < 100) {
       dispatch(showToast({ type: 'error', message: 'Amount must be at least ₦100' }));
       return;
@@ -353,12 +368,16 @@ const Withdraw = () => {
                     value={withdrawForm.amount}
                     onChange={(e) => setWithdrawForm(prev => ({ ...prev, amount: e.target.value }))}
                     className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="0.00"
+                    placeholder="Enter amount to withdraw"
                     min="100"
-                    max={walletBalance}
-                    step="0.01"
                     required
                   />
+                  <div className="text-xs text-blue-700 mt-1">
+                    Fee: ₦{feeLoading ? '...' : fee.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-blue-800 mt-1">
+                    Total: ₦{feeLoading ? '...' : totalWithFee.toFixed(2)}
+                  </div>
                 </div>
                 <p className="text-xs text-neutral-500 mt-1">
                   Minimum: ₦100 | Maximum: {formatCurrency(walletBalance)}

@@ -22,11 +22,14 @@ import {
 import FloatingFooter from '../components/FloatingFooter';
 import apiService from '../api/index';
 import { useDispatch } from 'react-redux';
-import { showToast } from '../store/slices/toastSlice';
+import { showToast } from '../store/slices/uiSlice';
+import { useError } from '../contexts/ErrorContext';
 import { useLoading } from '../contexts/LoadingContext';
+import useFeeSettings from '../hooks/useFeeSettings';
 
 const GiftCardVouchers = () => {
   const navigate = useNavigate();
+  const { fees, loading: feeLoading, error: feeError, calculateFee } = useFeeSettings();
   const dispatch = useDispatch();
   const [showBalance, setShowBalance] = useState(true);
   const [userBalance, setUserBalance] = useState(0);
@@ -45,6 +48,11 @@ const GiftCardVouchers = () => {
     deliveryDate: '',
     theme: 'birthday'
   });
+
+  // Calculate fee for current gift amount
+  const giftAmount = parseFloat(formData.giftAmount) || 0;
+  const fee = calculateFee('voucher_creation', giftAmount);
+  const totalWithFee = giftAmount + fee;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -132,7 +140,14 @@ const GiftCardVouchers = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Check if user has sufficient balance
+    // Check if user has sufficient balance (amount + fee)
+    if (userBalance < totalWithFee) {
+      dispatch(showToast({
+        message: `Insufficient balance. You need ₦${totalWithFee.toLocaleString()} (including ₦${fee.toLocaleString()} fee) but have ₦${userBalance.toLocaleString()}`,
+        type: 'error'
+      }));
+      return;
+    }
     const giftAmount = parseFloat(formData.giftAmount) || 0;
     if (userBalance < giftAmount) {
       dispatch(showToast({
@@ -164,13 +179,11 @@ const GiftCardVouchers = () => {
           message: 'Gift card voucher created successfully!',
           type: 'success'
         }));
-        // Refresh balance
+        navigate('/dashboard');
         const balanceResponse = await apiService.vouchers.getBalance();
         if (balanceResponse.success) {
           setUserBalance(balanceResponse.data?.balance || 0);
         }
-        // Navigate to vouchers list or dashboard
-        navigate('/dashboard');
       } else {
         dispatch(showToast({
           message: response.message || 'Failed to create voucher',
@@ -532,6 +545,10 @@ const GiftCardVouchers = () => {
                       <p className="text-3xl font-bold">
                          ₦{parseFloat(formData.giftAmount) || 0}
                       </p>
+                      <p className="text-white/70 mt-2 text-sm">
+                        Fee: ₦{feeLoading ? '...' : fee}
+                      </p>
+                      <p className="text-white/60 text-xs">Total: ₦{feeLoading ? '...' : totalWithFee}</p>
                     </div>
 
                     <div className="border-t border-white/20 pt-4">

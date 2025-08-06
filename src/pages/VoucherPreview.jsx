@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { useError } from '../contexts/ErrorContext';
 import apiService from '../api/index';
 import { showToast } from '../store/slices/toastSlice';
 import { 
