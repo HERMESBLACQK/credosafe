@@ -28,8 +28,14 @@ const CreateVoucher = () => {
       try {
         const response = await apiService.auth.getProfile();
         if (response.success) {
-          setUserData(response.data);
-          setHasRequiredData(response.data.phone && response.data.location);
+          // Update to access user data from response.data.user
+          setUserData(response.data.user);
+          // Check for required fields in the nested user object
+          setHasRequiredData(
+            response.data.user?.phone && 
+            response.data.user?.location &&
+            response.data.user?.wallet
+          );
         } else {
           dispatch(showToast({ message: response.message || 'Failed to fetch user data.', type: 'error' }));
           navigate("/"); // Redirect to home if user data cannot be fetched
@@ -75,18 +81,20 @@ const CreateVoucher = () => {
   if (!hasRequiredData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-primary-50 pb-24 flex items-center justify-center">
-        <div className="text-center">
-          <AlertTriangle className="w-16 h-16 text-red-500 mb-4" />
-          <h2 className="text-2xl font-bold text-neutral-900 mb-2">Incomplete Profile</h2>
-          <p className="text-neutral-600 mb-6">
-            To create vouchers, you need to complete your profile. Please add your phone number and location.
-          </p>
-          <button
-            onClick={() => navigate("/profile")}
-            className="bg-primary-600 text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity"
-          >
-            Complete Profile
-          </button>
+        <div className="max-w-md w-full mx-4 bg-white p-8 rounded-2xl shadow-soft">
+          <div className="flex flex-col items-center">
+            <AlertTriangle className="w-16 h-16 text-red-500 mb-4" />
+            <h2 className="text-2xl font-bold text-neutral-900 mb-2 text-center">Incomplete Profile</h2>
+            <p className="text-neutral-600 mb-6 text-center">
+              To create vouchers, you need to complete your profile. Please add your phone number and location.
+            </p>
+            <button
+              onClick={() => navigate("/profile")}
+              className="bg-primary-600 text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity w-full sm:w-auto"
+            >
+              Complete Profile
+            </button>
+          </div>
         </div>
       </div>
     );

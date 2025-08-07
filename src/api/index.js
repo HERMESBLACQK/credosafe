@@ -720,6 +720,7 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
+        console.error('❌ Error fetching wallet balance:', error);
         throw new Error(error.response?.data?.message || 'Failed to fetch wallet balance');
       }
     },
@@ -731,8 +732,14 @@ const apiService = {
           cacheKey: `wallet_transactions_${page}`,
           cacheTtl: 120000 // 2 minutes
         });
+        console.log('📊 Wallet transactions response:', {
+          success: response.success,
+          data: response.data,
+          pagination: response.data?.pagination
+        });
         return response.data;
       } catch (error) {
+        console.error('❌ Error fetching wallet transactions:', error);
         throw new Error(error.response?.data?.message || 'Failed to fetch wallet transactions');
       }
     },

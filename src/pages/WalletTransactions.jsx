@@ -46,21 +46,58 @@ const WalletTransactions = () => {
     transition: { duration: 0.6 }
   };
 
-  // Fetch transactions from API
+  // Fetch transactions from API with enhanced logging
   const fetchTransactions = async (page = 1) => {
+    const limit = 10;
     try {
       setIsLoading(true);
-      const response = await apiService.payments.getWalletTransactions(page, 10);
+      console.log(`🔄 Fetching transactions - Page: ${page}, Limit: ${limit}`);
+      
+      const response = await apiService.payments.getWalletTransactions(page, limit);
+      
+      console.log('📋 Wallet transactions response:', {
+        success: response.success,
+        data: response.data,
+        transactions: response.data?.transactions,
+        pagination: response.data?.pagination
+      });
       
       if (response.success) {
-        setTransactions(response.data.transactions);
-        setPagination(response.data.pagination);
+        const transactions = response.data.transactions || [];
+        const pagination = response.data.pagination || {};
+        
+        console.log(`✅ Successfully loaded ${transactions.length} transactions`, {
+          page: pagination.page,
+          limit: pagination.limit,
+          total: pagination.total,
+          pages: pagination.pages
+        });
+        
+        setTransactions(transactions);
+        setPagination({
+          page: pagination.page || page,
+          limit: pagination.limit || limit,
+          total: pagination.total || 0,
+          pages: pagination.pages || 1
+        });
       } else {
-        dispatch(showToast({ type: 'error', message: response.message || 'Failed to fetch transactions' }));
+        console.warn('⚠️ Failed to fetch transactions:', response.message);
+        dispatch(showToast({ 
+          type: 'error', 
+          message: response.message || 'Failed to fetch transactions' 
+        }));
       }
     } catch (error) {
-      console.error('Error fetching transactions:', error);
-      dispatch(showToast({ type: 'error', message: 'Failed to fetch transactions' }));
+      console.error('❌ Error fetching transactions:', {
+        error: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      dispatch(showToast({ 
+        type: 'error', 
+        message: error.response?.data?.message || 'Failed to fetch transactions' 
+      }));
     } finally {
       setIsLoading(false);
     }

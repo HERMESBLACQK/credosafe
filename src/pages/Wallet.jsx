@@ -80,13 +80,32 @@ const Wallet = () => {
   const fetchRecentTransactions = async () => {
     try {
       setIsLoadingTransactions(true);
+      console.log('🔄 Fetching recent transactions...');
       const response = await apiService.payments.getWalletTransactions(1, 5);
+      
+      console.log('📋 Recent transactions response:', {
+        success: response.success,
+        data: response.data,
+        transactions: response.data?.transactions,
+        pagination: response.data?.pagination
+      });
+      
       if (response.success) {
-        setRecentTransactions(response.data.transactions);
+        console.log(`✅ Successfully loaded ${response.data?.transactions?.length || 0} recent transactions`);
+        setRecentTransactions(response.data.transactions || []);
+      } else {
+        console.warn('⚠️ Failed to fetch transactions:', response.message);
+        dispatch(showToast({ 
+          type: 'error', 
+          message: response.message || 'Failed to fetch transactions' 
+        }));
       }
     } catch (error) {
-      console.error('Error fetching transactions:', error);
-      dispatch(showToast({ type: 'error', message: 'Failed to fetch transactions' }));
+      console.error('❌ Error fetching transactions:', error);
+      dispatch(showToast({ 
+        type: 'error', 
+        message: error.response?.data?.message || 'Failed to fetch transactions' 
+      }));
     } finally {
       setIsLoadingTransactions(false);
     }

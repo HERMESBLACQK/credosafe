@@ -39,6 +39,7 @@ const Withdraw = () => {
   const [tierLimits, setTierLimits] = useState(null);
   const [userData, setUserData] = useState(null);
   const [hasRequiredData, setHasRequiredData] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [withdrawFee, setWithdrawFee] = useState(0);
   const [withdrawForm, setWithdrawForm] = useState({
     amount: '',
@@ -46,6 +47,28 @@ const Withdraw = () => {
     bankCode: '',
     accountName: ''
   });
+  
+  // Calculate fee and total with fee
+  const calculateWithdrawalFee = (amount) => {
+    if (!amount || isNaN(amount) || amount <= 0) return 0;
+    
+    // Default fee structure if fees are not loaded
+    if (feeLoading || !fees || !fees.withdrawal) {
+      // Flat fee of 10 NGN or 1.5% whichever is higher (as a fallback)
+      const flatFee = 10;
+      const percentageFee = amount * 0.015;
+      return Math.max(flatFee, percentageFee);
+    }
+    
+    // Use the actual fee settings from the API
+    const { fixed, percentage } = fees.withdrawal;
+    return fixed + (amount * (percentage / 100));
+  };
+  
+  // Calculate fee and total with fee based on current amount
+  const amount = parseFloat(withdrawForm.amount) || 0;
+  const fee = calculateWithdrawalFee(amount);
+  const totalWithFee = amount + fee;
 
 
 
@@ -170,10 +193,34 @@ const Withdraw = () => {
 
   // Load data on component mount
   useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await apiService.auth.getProfile();
+        if (response.success) {
+          setUserData(response.data.user);
+          setHasRequiredData(
+            response.data.user?.phone && 
+            response.data.user?.location &&
+            response.data.user?.wallet
+          );
+        } else {
+          dispatch(showToast({ message: response.message || 'Failed to fetch user data.', type: 'error' }));
+          navigate("/");
+        }
+      } catch (error) {
+        dispatch(showToast({ message: 'An error occurred while fetching user data.', type: 'error' }));
+        console.error('Fetch user data error:', error);
+        navigate("/");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
     fetchWalletBalance();
     fetchBanks();
     fetchUserTier();
-  }, []);
+  }, [dispatch, navigate]);
 
   // Handle clicking outside dropdown
   useEffect(() => {
@@ -368,10 +415,10 @@ const Withdraw = () => {
       </header>
 
       {/* Validation Alert */}
-      {userData && !hasRequiredData && (
+      {!loading && userData && !hasRequiredData && (
         <div className="bg-red-50 border-l-4 border-red-400 p-4">
-          <div className="flex">
-            <AlertTriangle className="w-5 h-5 text-red-400" />
+          <div className="flex items-center justify-center">
+            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
             <div className="ml-3">
               <p className="text-sm text-red-700">
                 <strong>Profile Incomplete:</strong> Please add your phone number and location to your profile before withdrawing funds.
