@@ -77,7 +77,7 @@ const Redeem = () => {
     try {
       const response = await apiService.publicVouchers.searchByCode(scannedCode);
       if (response.success && response.data) {
-        navigate('/landingpage/redeem-voucher', { 
+        navigate('/landingpage/redeem-voucher-public', { 
           state: { 
             voucherData: response.data,
             method: 'qr',

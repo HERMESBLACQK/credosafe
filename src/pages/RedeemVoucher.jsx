@@ -46,7 +46,8 @@ const RedeemVoucher = () => {
   const [isRequestingOTP, setIsRequestingOTP] = useState(false);
 
   // Voucher data from navigation state
-  const [voucherData, setVoucherData] = useState(null);
+  const { state } = useLocation();
+  const [voucherData, setVoucherData] = useState(state?.voucherData || null);
   const [withdrawForm, setWithdrawForm] = useState({
     accountNumber: '',
     bankName: '',
@@ -70,83 +71,33 @@ const RedeemVoucher = () => {
   const fetchUserTier = async () => {
     try {
       const response = await apiService.auth.getTier();
-      if (response.success) {
-        try {
-          const tierResponse = await apiService.auth.getTierLimits(response.data.tier.level);
-          if (tierResponse.success) {
-            // setTierLimits(tierResponse.data); // This line was removed
-          } else {
-            // setTierLimits({ // This line was removed
-            //   daily_withdrawal_limit: 50000,
-            //   monthly_withdrawal_limit: 500000,
-            //   max_voucher_amount: 100000,
-            //   daily_limit: 1000000
-            // });
-          }
-        } catch (error) {
-          // setTierLimits({ // This line was removed
-          //   daily_withdrawal_limit: 50000,
-          //   monthly_withdrawal_limit: 500000,
-          //   max_voucher_amount: 100000,
-          //   daily_limit: 1000000
-          // });
-        }
-      } else {
-        if (response.status === 401 || response.status === 403) {
-          alert('Session expired or not authorized. Please log in again.');
-          window.location.href = '/signin';
-        } else {
-          // setUserTier(1); // This line was removed
-          // setTierLimits({ // This line was removed
-          //   daily_withdrawal_limit: 50000,
-          //   monthly_withdrawal_limit: 500000,
-          //   max_voucher_amount: 100000,
-          //   daily_limit: 1000000
-          // });
-        }
+      if (!response.success && (response.status === 401 || response.status === 403)) {
+        alert('Session expired or not authorized. Please log in again.');
+        window.location.href = '/signin';
       }
     } catch (error) {
       if (error?.response?.status === 401 || error?.response?.status === 403) {
         alert('Session expired or not authorized. Please log in again.');
         window.location.href = '/signin';
-      } else {
-        // setUserTier(1); // This line was removed
-        // setTierLimits({ // This line was removed
-        //   daily_withdrawal_limit: 50000,
-        //   monthly_withdrawal_limit: 500000,
-        //   max_voucher_amount: 100000,
-        //   daily_limit: 1000000
-        // });
       }
     }
   };
 
   useEffect(() => {
-    console.log('🔍 RedeemVoucher useEffect triggered');
-    fetchUserTier();
-    console.log('🔍 Location state:', location.state);
-    
-    if (location.state?.voucherData) {
-      console.log('✅ Voucher data received:', location.state.voucherData);
-      console.log('🔍 Voucher type:', location.state.voucherData.type);
-      console.log('🔍 Milestones:', location.state.voucherData.milestones);
-      console.log('🔍 Is milestones array?', Array.isArray(location.state.voucherData.milestones));
-      console.log('🔍 Milestones length:', location.state.voucherData.milestones?.length);
-      setVoucherData(location.state.voucherData);
-      
-      // Set initial redeem amount for prepaid vouchers
-      if (location.state.voucherData.type === 'prepaid') {
-        const availableAmount = location.state.voucherData.available_amount || location.state.voucherData.total_amount;
-        setRedeemAmount(availableAmount?.toString() || '');
-      }
-    } else {
-      console.log('❌ No voucher data found, redirecting to redeem page');
-      // Add a small delay to ensure the component is mounted
-      setTimeout(() => {
-        navigate('/redeem');
-      }, 100);
+    if (!voucherData) {
+      console.error('No voucher data found, redirecting.');
+      navigate('/redeem');
+      return;
     }
-  }, [location.state, navigate]);
+
+    fetchUserTier();
+
+    if (voucherData.type === 'prepaid') {
+      const availableAmount = voucherData.available_amount || voucherData.total_amount;
+      setRedeemAmount(availableAmount?.toString() || '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voucherData, navigate]);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -450,10 +401,9 @@ const RedeemVoucher = () => {
 
   if (!voucherData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-primary-50 flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-neutral-600">Loading voucher details...</p>
+          <p className="text-lg">Loading voucher details...</p>
         </div>
       </div>
     );

@@ -20,8 +20,8 @@ const QRCodeScanner = ({ onScan, onClose, onError }) => {
             qrbox: { width: 250, height: 250 },
           },
           (decodedText) => {
-            onScan(decodedText);
             stopScanner();
+            onScan(decodedText);
           },
           (errorMessage) => {
              // This callback is for continuous scanning feedback, not just errors
@@ -33,8 +33,9 @@ const QRCodeScanner = ({ onScan, onClose, onError }) => {
         setStatusMessage('Scanning...');
       } catch (err) {
         console.error('Error starting scanner:', err);
-        setStatusMessage('Failed to start camera. Check permissions.');
-        if (onError) onError('Failed to start camera.');
+        setStatusMessage('Failed to start camera. Please check permissions and try again.');
+        // Do not call global onError, as it may trigger a logout.
+        // if (onError) onError('Failed to start camera.');
       }
     };
 
