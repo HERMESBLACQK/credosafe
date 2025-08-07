@@ -73,76 +73,84 @@ function GlobalErrorDisplay() {
   );
 }
 
-function App() {
+const AppContent = () => {
   useInactivityLogout();
 
+  return (
+    <>
+      <GlobalErrorDisplay />
+      <div className="App">
+        <Routes>
+          <Route path="/landingpage/redeem-public" element={<RedeemPublic />} />
+          <Route path="/landingpage/redeem-voucher-public" element={<RedeemVoucherPublic />} />
+          {/* Public Landing Page Routes */}
+          <Route path="/" element={<Navigate to="/landingpage" />} />
+          <Route path="/landingpage" element={<LandingPage />} />
+          <Route path="/landingpage/forgot-password" element={<ForgotPassword />} />
+          <Route path="/landingpage/about" element={<About />} />
+          <Route path="/landingpage/contact" element={<Contact />} />
+          <Route path="/landingpage/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/landingpage/terms-of-service" element={<TermsOfService />} />
+          <Route path="/landingpage/blog" element={<Blog />} />
+          <Route path="/landingpage/cookie-policy" element={<CookiePolicy />} />
+          <Route path="/landingpage/gdpr" element={<GDPR />} />
+          <Route path="/landingpage/gift-card" element={<GiftCardVouchersLanding />} />
+          <Route path="/landingpage/prepaid" element={<PrepaidVouchersLanding />} />
+          <Route path="/landingpage/purchase-escrow" element={<PurchaseEscrowVouchersLanding />} />
+          <Route path="/landingpage/work-order" element={<WorkOrderVouchersLanding />} />
+          <Route path="/landingpage/gift-card-vouchers" element={<GiftCardVouchersLanding />} />
+          <Route path="/landingpage/prepaid-vouchers" element={<PrepaidVouchersLanding />} />
+          <Route path="/landingpage/purchase-escrow-vouchers" element={<PurchaseEscrowVouchersLanding />} />
+          <Route path="/landingpage/work-order-vouchers" element={<WorkOrderVouchersLanding />} />
+          
+          {/* Auth Routes */}
+          <Route path="/signin" element={<SignIn />} />
+          <Route path="/signup" element={<SignUp />} />
+          
+          {/* Protected Routes */}
+          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/transactions" element={<PrivateRoute><Transactions /></PrivateRoute>} />
+          <Route path="/gift-card" element={<PrivateRoute><GiftCardVouchers /></PrivateRoute>} />
+          <Route path="/prepaid" element={<PrivateRoute><PrepaidVouchers /></PrivateRoute>} />
+          <Route path="/purchase-escrow" element={<PrivateRoute><PurchaseEscrowVouchers /></PrivateRoute>} />
+          <Route path="/work-order" element={<PrivateRoute><WorkOrderVouchers /></PrivateRoute>} />
+          <Route path="/redeem" element={<PrivateRoute><Redeem /></PrivateRoute>} />
+          <Route path="/voucher-preview/:id" element={<PrivateRoute><VoucherPreview /></PrivateRoute>} />
+          <Route path="/voucher/:id" element={<PrivateRoute><VoucherPreview /></PrivateRoute>} />
+          <Route path="/tier" element={<PrivateRoute><Tier /></PrivateRoute>} />
+          <Route path="/change-password" element={<PrivateRoute><ChangePassword /></PrivateRoute>} />
+          <Route path="/redeem-voucher" element={<PrivateRoute><RedeemVoucher /></PrivateRoute>} />
+          <Route path="/create-voucher" element={<PrivateRoute><CreateVoucher /></PrivateRoute>} />
+          <Route path="/wallet" element={<PrivateRoute><Wallet /></PrivateRoute>} />
+          <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+          <Route path="/device-management" element={<PrivateRoute><DeviceManagement /></PrivateRoute>} />
+          <Route path="/wallet-transactions" element={<PrivateRoute><WalletTransactions /></PrivateRoute>} />
+          <Route path="/withdraw" element={<PrivateRoute><Withdraw /></PrivateRoute>} />
+          <Route path="/faq" element={<PrivateRoute><FAQ /></PrivateRoute>} />
+          <Route path="/referral" element={<PrivateRoute><Referral /></PrivateRoute>} />
+          
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/landingpage" replace />} />
+        </Routes>
+      </div>
+    </>
+  );
+};
+
+function App() {
   return (
     <Provider store={store}>
       <PersistGate loading={<PersistenceLoader />} persistor={persistor}>
         <LoadingProvider>
           <ErrorProvider>
             <Router>
-              <GlobalErrorDisplay />
-              <div className="App">
-                <Routes>
-  <Route path="/landingpage/redeem-public" element={<RedeemPublic />} />
-  <Route path="/landingpage/redeem-voucher-public" element={<RedeemVoucherPublic />} />
-                {/* Public Landing Page Routes */}
-                <Route path="/" element={<Navigate to="/landingpage" />} />
-                <Route path="/landingpage" element={<LandingPage />} />
-                <Route path="/landingpage/forgot-password" element={<ForgotPassword />} />
-                <Route path="/landingpage/about" element={<About />} />
-                <Route path="/landingpage/contact" element={<Contact />} />
-                <Route path="/landingpage/privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="/landingpage/terms-of-service" element={<TermsOfService />} />
-                <Route path="/landingpage/blog" element={<Blog />} />
-                <Route path="/landingpage/cookie-policy" element={<CookiePolicy />} />
-                <Route path="/landingpage/gdpr" element={<GDPR />} />
-                <Route path="/landingpage/gift-card" element={<GiftCardVouchersLanding />} />
-                <Route path="/landingpage/prepaid" element={<PrepaidVouchersLanding />} />
-                <Route path="/landingpage/purchase-escrow" element={<PurchaseEscrowVouchersLanding />} />
-                <Route path="/landingpage/work-order" element={<WorkOrderVouchersLanding />} />
-                <Route path="/landingpage/gift-card-vouchers" element={<GiftCardVouchersLanding />} />
-                <Route path="/landingpage/prepaid-vouchers" element={<PrepaidVouchersLanding />} />
-                <Route path="/landingpage/purchase-escrow-vouchers" element={<PurchaseEscrowVouchersLanding />} />
-                <Route path="/landingpage/work-order-vouchers" element={<WorkOrderVouchersLanding />} />
-                
-                {/* Auth Routes */}
-                <Route path="/signin" element={<SignIn />} />
-                <Route path="/signup" element={<SignUp />} />
-                
-                {/* Protected Routes */}
-                <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-                <Route path="/transactions" element={<PrivateRoute><Transactions /></PrivateRoute>} />
-                <Route path="/gift-card" element={<PrivateRoute><GiftCardVouchers /></PrivateRoute>} />
-                <Route path="/prepaid" element={<PrivateRoute><PrepaidVouchers /></PrivateRoute>} />
-                <Route path="/purchase-escrow" element={<PrivateRoute><PurchaseEscrowVouchers /></PrivateRoute>} />
-                <Route path="/work-order" element={<PrivateRoute><WorkOrderVouchers /></PrivateRoute>} />
-                <Route path="/redeem" element={<PrivateRoute><Redeem /></PrivateRoute>} />
-                <Route path="/voucher-preview/:id" element={<PrivateRoute><VoucherPreview /></PrivateRoute>} />
-                <Route path="/voucher/:id" element={<PrivateRoute><VoucherPreview /></PrivateRoute>} />
-                <Route path="/tier" element={<PrivateRoute><Tier /></PrivateRoute>} />
-                <Route path="/change-password" element={<PrivateRoute><ChangePassword /></PrivateRoute>} />
-                <Route path="/redeem-voucher" element={<PrivateRoute><RedeemVoucher /></PrivateRoute>} />
-                <Route path="/create-voucher" element={<PrivateRoute><CreateVoucher /></PrivateRoute>} />
-                <Route path="/wallet" element={<PrivateRoute><Wallet /></PrivateRoute>} />
-                <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
-                <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-                <Route path="/device-management" element={<PrivateRoute><DeviceManagement /></PrivateRoute>} />
-                <Route path="/wallet-transactions" element={<PrivateRoute><WalletTransactions /></PrivateRoute>} />
-                <Route path="/withdraw" element={<PrivateRoute><Withdraw /></PrivateRoute>} />
-                <Route path="/faq" element={<PrivateRoute><FAQ /></PrivateRoute>} />
-                <Route path="/referral" element={<PrivateRoute><Referral /></PrivateRoute>} />
-                
-                {/* Fallback */}
-                <Route path="*" element={<Navigate to="/landingpage" replace />} />
-              </Routes>
-            </div>
-          </Router>
-        </ErrorProvider>
-      </LoadingProvider>
-    </PersistGate>
-  </Provider>
+              <AppContent />
+            </Router>
+          </ErrorProvider>
+        </LoadingProvider>
+      </PersistGate>
+    </Provider>
   );
 }
 
