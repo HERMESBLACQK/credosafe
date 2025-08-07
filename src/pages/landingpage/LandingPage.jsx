@@ -2,6 +2,7 @@
 import { motion } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { 
   Shield, 
   CreditCard, 
@@ -15,12 +16,15 @@ import {
   Globe,
   LogIn,
   UserPlus,
-  LogOut
+  LogOut,
+  Menu,
+  X
 } from 'lucide-react';
 import { logoutUser } from '../../store/slices/authSlice';
 import { showToast } from '../../store/slices/uiSlice';
 
 const LandingPage = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   
@@ -110,50 +114,55 @@ const LandingPage = () => {
               <Shield className="w-8 h-8 text-blue-600" />
               <span className="text-xl font-bold text-gray-900">CredoSafe</span>
             </motion.div>
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="hidden md:flex items-center space-x-4"
-            >
+            <div className="flex items-center">
+              {/* Desktop Menu */}
+              <div className="hidden md:flex items-center space-x-4">
               <a href="#features" className="text-gray-600 hover:text-blue-600 transition-colors">Features</a>
               <a href="#vouchers" className="text-gray-600 hover:text-blue-600 transition-colors">Vouchers</a>
-              <button
-                onClick={() => navigate('/landingpage/redeem-public')}
-                className="text-gray-600 hover:text-blue-600 transition-colors"
-              >
-                Redeem
+              <a href="#contact" className="text-gray-600 hover:text-blue-600 transition-colors">Contact</a>
+              <span className="text-gray-300">|</span>
+              <button onClick={() => navigate('/signin')} className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors">
+                <LogIn className="w-5 h-5" />
+                <span>Sign In</span>
               </button>
-              <button 
-                onClick={() => navigate('/landingpage/about')}
-                className="text-gray-600 hover:text-blue-600 transition-colors"
-              >
-                About
-              </button>
-              <button 
-                onClick={() => navigate('/landingpage/contact')}
-                className="text-gray-600 hover:text-blue-600 transition-colors"
-              >
-                Contact
-              </button>
-              <div className="flex items-center space-x-3">
-                <button 
-                  onClick={() => navigate('/signin')}
-                  className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
-                >
-                  <LogIn className="w-4 h-4" />
-                  <span>Sign In</span>
-                </button>
-                <button 
-                  onClick={() => navigate('/signup')}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                >
-                  <UserPlus className="w-4 h-4" />
+                <button onClick={() => navigate('/register')} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+                  <UserPlus className="w-5 h-5" />
                   <span>Sign Up</span>
                 </button>
               </div>
-            </motion.div>
+
+              {/* Mobile Menu Button */}
+              <div className="md:hidden">
+                <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 hover:text-blue-600">
+                  {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden bg-white border-t border-gray-200">
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+              <a href="#features" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50">Features</a>
+              <a href="#vouchers" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50">Vouchers</a>
+              <a href="#contact" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50">Contact</a>
+            </div>
+            <div className="pt-4 pb-3 border-t border-gray-200">
+              <div className="px-5 space-y-2">
+                <button onClick={() => { navigate('/signin'); setIsMenuOpen(false); }} className="w-full flex items-center justify-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors px-4 py-2 rounded-lg border border-gray-300">
+                  <LogIn className="w-5 h-5" />
+                  <span>Sign In</span>
+                </button>
+                <button onClick={() => { navigate('/register'); setIsMenuOpen(false); }} className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2">
+                  <UserPlus className="w-5 h-5" />
+                  <span>Sign Up</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section */}
@@ -189,12 +198,10 @@ const LandingPage = () => {
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
               <button 
-             onClick={() => {
-              navigate('/signin');
-            }}
+                onClick={() => navigate('/landingpage/redeem-public')}
                 className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition-all transform hover:scale-105 flex items-center justify-center space-x-2"
               >
-                <span>{ 'Create Voucher'}</span>
+                <span>Redeem</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg hover:border-blue-600 hover:text-blue-600 transition-all">
@@ -377,28 +384,28 @@ const LandingPage = () => {
             <div>
               <h3 className="font-semibold mb-4">Product</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Work Orders</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Purchase Escrow</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Prepaid Cards</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Gift Cards</a></li>
+                <li><a href="/landingpage/work-order-vouchers" className="hover:text-white transition-colors">Work Orders</a></li>
+                <li><a href="/landingpage/purchase-escrow-vouchers" className="hover:text-white transition-colors">Purchase Escrow</a></li>
+                <li><a href="/landingpage/prepaid-vouchers" className="hover:text-white transition-colors">Prepaid Cards</a></li>
+                <li><a href="/landingpage/gift-card-vouchers" className="hover:text-white transition-colors">Gift Cards</a></li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-4">Company</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="/about" className="hover:text-white transition-colors">About</a></li>
-                <li><a href="/contact" className="hover:text-white transition-colors">Contact</a></li>
-                <li><a href="/contact" className="hover:text-white transition-colors">Support</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
+                <li><a href="/landingpage/about" className="hover:text-white transition-colors">About</a></li>
+                <li><a href="/landingpage/contact" className="hover:text-white transition-colors">Contact</a></li>
+                <li><a href="/landingpage/contact" className="hover:text-white transition-colors">Support</a></li>
+                <li><a href="/landingpage/blog" className="hover:text-white transition-colors">Blog</a></li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-4">Legal</h3>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                <li><a href="/terms" className="hover:text-white transition-colors">Terms of Service</a></li>
-                <li><a href="/privacy" className="hover:text-white transition-colors">Cookie Policy</a></li>
-                <li><a href="/privacy" className="hover:text-white transition-colors">GDPR</a></li>
+                <li><a href="/landingpage/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="/landingpage/terms-of-service" className="hover:text-white transition-colors">Terms of Service</a></li>
+                <li><a href="/landingpage/cookie-policy" className="hover:text-white transition-colors">Cookie Policy</a></li>
+                <li><a href="/landingpage/gdpr" className="hover:text-white transition-colors">GDPR</a></li>
               </ul>
             </div>
           </div>

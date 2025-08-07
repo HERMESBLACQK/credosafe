@@ -42,48 +42,37 @@ const Dashboard = () => {
   })) : [];
 
   useEffect(() => {
-    console.log('🔍 Dashboard useEffect - isAuthenticated:', isAuthenticated, 'user:', user);
-    
+    if (!isUserLoaded) {
+      startLoading('dashboard', 'Loading dashboard data...');
+      return;
+    }
+
     if (!isAuthenticated) {
       console.log('🔍 Not authenticated, redirecting to signin');
       navigate('/signin');
+      stopLoading('dashboard');
       return;
     }
-    
+
     // Fetch user's vouchers
-    startLoading('dashboard', 'Loading dashboard data...');
     dispatch(fetchVouchers());
 
-    // Use balance from user profile
-    const fetchBalance = () => {
-      try {
-        setIsLoadingBalance(true);
-        console.log('🔍 Fetching balance from user:', userProfile?.wallet?.balance);
-        // Use balance from user profile
-        if (isUserLoaded && userProfile?.wallet?.balance !== undefined) {
-          setUserBalance(userProfile.wallet.balance);
-        } else {
-          setUserBalance(0);
-        }
-      } catch (error) {
-        console.error('Balance error:', error);
+    // Set balance from user profile
+    try {
+      setIsLoadingBalance(true);
+      if (userProfile?.wallet?.balance !== undefined) {
+        setUserBalance(userProfile.wallet.balance);
+      } else {
         setUserBalance(0);
-      } finally {
-        setIsLoadingBalance(false);
-        stopLoading('dashboard');
       }
-    };
-
-    fetchBalance();
-  }, [isAuthenticated, navigate, dispatch, user]);
-
-  // Separate useEffect for balance updates when user profile changes
-  useEffect(() => {
-    if (isUserLoaded && userProfile?.wallet?.balance !== undefined) {
-      console.log('🔍 Updating balance from userProfile:', userProfile.wallet.balance);
-      setUserBalance(userProfile.wallet.balance);
+    } catch (error) {
+      console.error('Balance error:', error);
+      setUserBalance(0);
+    } finally {
+      setIsLoadingBalance(false);
+      stopLoading('dashboard');
     }
-  }, [userProfile?.wallet?.balance, isUserLoaded]);
+  }, [isUserLoaded, isAuthenticated, navigate, dispatch, userProfile]);
 
 
 

@@ -141,24 +141,33 @@ apiClient.interceptors.response.use(
 
       // Try to refresh token
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (refreshToken) {
-          const refreshResponse = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refreshToken
-          });
+        const refreshToken = secureTokenStorage.getRefreshToken();
+        if (!refreshToken) {
+          // If no refresh token, logout immediately.
+          store.dispatch(logoutUser());
+          return Promise.reject(new Error("Session expired. No refresh token available."));
+        }
 
-          if (refreshResponse.data.success) {
-            localStorage.setItem('token', refreshResponse.data.token);
-            // Store new refresh token if provided
-            if (refreshResponse.data.refreshToken) {
-              localStorage.setItem('refreshToken', refreshResponse.data.refreshToken);
-            }
-            originalRequest.headers.Authorization = `Bearer ${refreshResponse.data.token}`;
-            return apiClient(originalRequest);
+        const refreshResponse = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+
+        if (refreshResponse.data.success) {
+          const { token, refreshToken: newRefreshToken } = refreshResponse.data;
+          
+          // Update tokens in secure storage
+          secureTokenStorage.setToken(token);
+          if (newRefreshToken) {
+            secureTokenStorage.setRefreshToken(newRefreshToken);
           }
+
+          // Update the header of the original request and retry it
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return apiClient(originalRequest);
         }
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError);
+        // If refresh fails, logout the user
+        store.dispatch(logoutUser());
+        return Promise.reject(refreshError);
       }
 
       // Only logout if it's not a login or OTP verification request

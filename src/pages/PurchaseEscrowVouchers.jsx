@@ -21,7 +21,7 @@ import {
 import FloatingFooter from '../components/FloatingFooter';
 import apiService from '../api/index';
 import { useDispatch } from 'react-redux';
-import { showToast } from '../store/slices/uiSlice';
+import { showToast } from '../store/slices/toastSlice';
 import { useError } from '../contexts/ErrorContext';
 import { useLoading } from '../contexts/LoadingContext';
 import useFeeSettings from '../hooks/useFeeSettings';
@@ -33,6 +33,7 @@ const PurchaseEscrowVouchers = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [userBalance, setUserBalance] = useState(0);
   const [userData, setUserData] = useState(null);
+  const [voucherFee, setVoucherFee] = useState(0);
   const { startLoading, stopLoading, isLoading: checkLoading } = useLoading();
   const [formData, setFormData] = useState({
     itemTitle: '',
@@ -103,13 +104,14 @@ const PurchaseEscrowVouchers = () => {
       ...prev,
       [field]: value
     }));
+
+    if (field === 'itemValue') {
+      const fee = calculateFee('voucher_creation', parseFloat(value) || 0);
+      setVoucherFee(fee);
+    }
   };
 
-  const calculateTotal = () => {
-    const value = parseFloat(formData.itemValue) || 0;
-    const fee = calculateFee('voucher_creation', value);
-    return value + fee;
-  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -134,12 +136,11 @@ const PurchaseEscrowVouchers = () => {
     }
     
     const value = parseFloat(formData.itemValue) || 0;
-    const fee = calculateFee('voucher_creation', value);
-    const totalWithFee = value + fee;
+    const totalCost = value + voucherFee; // Use 'voucherFee' state
     // Check if user has sufficient balance for amount + fee
-    if (userBalance < totalWithFee) {
+    if (userBalance < totalCost) {
       dispatch(showToast({
-        message: `Insufficient balance. You need ₦${totalWithFee.toLocaleString()} (including ₦${fee.toLocaleString()} fee) but have ₦${userBalance.toLocaleString()}`,
+        message: `Insufficient balance. You need ₦${totalCost.toLocaleString()} (including ₦${voucherFee.toLocaleString()} fee) but have ₦${userBalance.toLocaleString()}`,
         type: 'error'
       }));
       return;
@@ -585,12 +586,12 @@ const PurchaseEscrowVouchers = () => {
                       </div>
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-sm text-neutral-600">Fee:</span>
-                        <span className="text-sm font-medium">₦{feeLoading ? '...' : (calculateFee('voucher_creation', parseFloat(formData.itemValue) || 0)).toFixed(2)}</span>
+                        <span className="text-sm font-medium">₦{feeLoading ? '...' : voucherFee.toFixed(2)}</span>
                       </div>
                       <div className="border-t border-neutral-200 pt-2">
                         <div className="flex justify-between items-center">
                           <span className="font-semibold text-neutral-900">Total:</span>
-                          <span className="text-lg font-bold text-green-600">₦{feeLoading ? '...' : ((parseFloat(formData.itemValue) || 0) + calculateFee('voucher_creation', parseFloat(formData.itemValue) || 0)).toFixed(2)}</span>
+                          <span className="text-lg font-bold text-green-600">₦{feeLoading ? '...' : (value + voucherFee).toFixed(2)}</span>
                         </div>
                       </div>
                     </div>

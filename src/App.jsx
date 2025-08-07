@@ -35,6 +35,9 @@ import About from './pages/landingpage/About';
 import Contact from './pages/landingpage/Contact';
 import PrivacyPolicy from './pages/landingpage/PrivacyPolicy';
 import TermsOfService from './pages/landingpage/TermsOfService';
+import Blog from './pages/landingpage/Blog';
+import CookiePolicy from './pages/landingpage/CookiePolicy';
+import GDPR from './pages/landingpage/GDPR';
 import GiftCardVouchersLanding from './pages/landingpage/GiftCardVouchersPublic';
 import PrepaidVouchersLanding from './pages/landingpage/PrepaidVouchersPublic';
 import PurchaseEscrowVouchersLanding from './pages/landingpage/PurchaseEscrowVouchersPublic';
@@ -47,6 +50,7 @@ import PrivateRoute from './components/PrivateRoute';
 import { LoadingProvider } from './contexts/LoadingContext';
 import { ErrorProvider, useError } from './contexts/ErrorContext';
 import ErrorMessage from './components/ErrorMessage';
+import useInactivityLogout from './hooks/useInactivityLogout';
 
 // Enhanced loading component for persistence
 const PersistenceLoader = () => (
@@ -70,6 +74,8 @@ function GlobalErrorDisplay() {
 }
 
 function App() {
+  useInactivityLogout();
+
   return (
     <Provider store={store}>
       <PersistGate loading={<PersistenceLoader />} persistor={persistor}>
@@ -89,6 +95,9 @@ function App() {
                 <Route path="/landingpage/contact" element={<Contact />} />
                 <Route path="/landingpage/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="/landingpage/terms-of-service" element={<TermsOfService />} />
+                <Route path="/landingpage/blog" element={<Blog />} />
+                <Route path="/landingpage/cookie-policy" element={<CookiePolicy />} />
+                <Route path="/landingpage/gdpr" element={<GDPR />} />
                 <Route path="/landingpage/gift-card" element={<GiftCardVouchersLanding />} />
                 <Route path="/landingpage/prepaid" element={<PrepaidVouchersLanding />} />
                 <Route path="/landingpage/purchase-escrow" element={<PurchaseEscrowVouchersLanding />} />

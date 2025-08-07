@@ -22,7 +22,7 @@ import {
 import FloatingFooter from '../components/FloatingFooter';
 import apiService from '../api/index';
 import { useDispatch } from 'react-redux';
-import { showToast } from '../store/slices/uiSlice';
+import { showToast } from '../store/slices/toastSlice';
 import { useError } from '../contexts/ErrorContext';
 import { useLoading } from '../contexts/LoadingContext';
 import useFeeSettings from '../hooks/useFeeSettings';
@@ -36,6 +36,7 @@ const GiftCardVouchers = () => {
   const [selectedDesign, setSelectedDesign] = useState('birthday');
   const [themes, setThemes] = useState([]);
   const [userData, setUserData] = useState(null);
+  const [voucherFee, setVoucherFee] = useState(0);
   const { startLoading, stopLoading, isLoading: checkLoading } = useLoading();
   const [formData, setFormData] = useState({
     giftAmount: '',
@@ -50,10 +51,7 @@ const GiftCardVouchers = () => {
     theme: 'birthday'
   });
 
-  // Calculate fee for current gift amount
-  const giftAmount = parseFloat(formData.giftAmount) || 0;
-  const fee = calculateFee('voucher_creation', giftAmount);
-  const totalWithFee = giftAmount + fee;
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -119,6 +117,16 @@ const GiftCardVouchers = () => {
     fetchData();
   }, [dispatch]);
 
+  useEffect(() => {
+    if (userData) {
+      setFormData(prevData => ({
+        ...prevData,
+        senderName: `${userData.first_name} ${userData.last_name}`.trim(),
+        senderEmail: userData.email,
+      }));
+    }
+  }, [userData]);
+
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
     animate: { opacity: 1, y: 0 },
@@ -130,6 +138,11 @@ const GiftCardVouchers = () => {
       ...prev,
       [field]: value
     }));
+
+    if (field === 'giftAmount') {
+      const fee = calculateFee('voucher_creation', parseFloat(value) || 0);
+      setVoucherFee(fee);
+    }
   };
 
   // Helper function to get icon component
@@ -577,9 +590,9 @@ const GiftCardVouchers = () => {
                          ₦{parseFloat(formData.giftAmount) || 0}
                       </p>
                       <p className="text-white/70 mt-2 text-sm">
-                        Fee: ₦{feeLoading ? '...' : fee}
+                        Fee: ₦{feeLoading ? '...' : voucherFee.toFixed(2)}
                       </p>
-                      <p className="text-white/60 text-xs">Total: ₦{feeLoading ? '...' : totalWithFee}</p>
+                      <p className="text-white/60 text-xs">Total: ₦{feeLoading ? '...' : (parseFloat(formData.giftAmount) + voucherFee).toFixed(2)}</p>
                     </div>
 
                     <div className="border-t border-white/20 pt-4">

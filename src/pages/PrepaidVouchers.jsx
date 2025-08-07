@@ -31,6 +31,7 @@ const PrepaidVouchers = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [userBalance, setUserBalance] = useState(0);
   const [userData, setUserData] = useState(null);
+  const [voucherFee, setVoucherFee] = useState(0);
   const { startLoading, stopLoading, isLoading: checkLoading } = useLoading();
   const [formData, setFormData] = useState({
     voucherAmount: '',
@@ -106,6 +107,11 @@ const PrepaidVouchers = () => {
       ...prev,
       [field]: value
     }));
+
+    if (field === 'voucherAmount') {
+      const fee = calculateFee('voucher_creation', parseFloat(value) || 0);
+      setVoucherFee(fee);
+    }
   };
 
   const businessCategories = [
@@ -128,15 +134,6 @@ const PrepaidVouchers = () => {
       return;
     }
 
-    // Check if recipient email is the same as user's email
-    if (formData.recipientEmail && formData.recipientEmail.toLowerCase() === userData.email.toLowerCase()) {
-      dispatch(showToast({
-        message: 'You cannot create a prepaid voucher for yourself. Please use a different recipient email.',
-        type: 'error'
-      }));
-      return;
-    }
-    
     const voucherAmount = parseFloat(formData.voucherAmount) || 0;
     const fee = calculateFee('voucher_creation', voucherAmount);
     const totalWithFee = voucherAmount + fee;
@@ -571,9 +568,9 @@ const PrepaidVouchers = () => {
                         ₦{parseFloat(formData.voucherAmount) || 0}
                       </p>
                       <p className="text-purple-700 mt-2 text-sm">
-                        Fee: ₦{feeLoading ? '...' : (calculateFee('voucher_creation', parseFloat(formData.voucherAmount) || 0)).toFixed(2)}
+                        Fee: ₦{feeLoading ? '...' : voucherFee.toFixed(2)}
                       </p>
-                      <p className="text-purple-600 text-xs">Total: ₦{feeLoading ? '...' : ((parseFloat(formData.voucherAmount) || 0) + calculateFee('voucher_creation', parseFloat(formData.voucherAmount) || 0)).toFixed(2)}</p>
+                      <p className="text-purple-600 text-xs">Total: ₦{(parseFloat(formData.voucherAmount) + voucherFee).toFixed(2)}</p>
                     </div>
 
                     <div className="border-b border-neutral-200 pb-4">

@@ -14,7 +14,7 @@ import {
 import FloatingFooter from '../components/FloatingFooter';
 import apiService from '../api/index';
 import { useDispatch } from 'react-redux';
-import { showToast } from '../store/slices/uiSlice';
+import { showToast } from '../store/slices/toastSlice';
 
 const CreateVoucher = () => {
   const navigate = useNavigate();
@@ -26,12 +26,18 @@ const CreateVoucher = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const user = await apiService.getUser();
-        setUserData(user);
-        setHasRequiredData(user.phone && user.location);
-      } catch {
-        dispatch(showToast({ message: "Failed to fetch user data.", type: "error" }));
-        navigate("/"); // Redirect to home if user data cannot be fetched
+        const response = await apiService.auth.getProfile();
+        if (response.success) {
+          setUserData(response.data);
+          setHasRequiredData(response.data.phone && response.data.location);
+        } else {
+          dispatch(showToast({ message: response.message || 'Failed to fetch user data.', type: 'error' }));
+          navigate("/"); // Redirect to home if user data cannot be fetched
+        }
+      } catch (error) {
+        dispatch(showToast({ message: 'An error occurred while fetching user data.', type: 'error' }));
+        console.error('Fetch user data error:', error);
+        navigate("/");
       } finally {
         setLoading(false);
       }

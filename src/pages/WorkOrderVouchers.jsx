@@ -33,6 +33,7 @@ const WorkOrderVouchers = () => {
   const [userBalance, setUserBalance] = useState(0);
   const [themes, setThemes] = useState([]);
   const [userData, setUserData] = useState(null);
+  const [voucherFee, setVoucherFee] = useState(0);
   const { startLoading, stopLoading, isLoading: checkLoading } = useLoading();
   const [formData, setFormData] = useState({
     projectTitle: '',
@@ -123,6 +124,11 @@ const WorkOrderVouchers = () => {
       ...prev,
       [field]: value
     }));
+
+    if (field === 'totalAmount') {
+      const fee = calculateFee('voucher_creation', parseFloat(value) || 0);
+      setVoucherFee(fee);
+    }
   };
 
   const handleMilestoneChange = (index, field, value) => {
@@ -195,7 +201,7 @@ const WorkOrderVouchers = () => {
     
     const amount = parseFloat(formData.totalAmount) || 0;
     const fee = calculateFee('voucher_creation', amount);
-    const totalWithFee = amount + fee;
+    const totalWithFee = calculateTotal();
     if (userBalance < totalWithFee) {
       dispatch(showToast({
         message: `Insufficient balance. You need ₦${totalWithFee.toLocaleString()} (including ₦${fee.toLocaleString()} fee) but have ₦${userBalance.toLocaleString()}`,

@@ -28,7 +28,7 @@ const Withdraw = () => {
   const { fees, loading: feeLoading, error: feeError, calculateFee } = useFeeSettings();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { startGlobalLoading, stopGlobalLoading } = useLoading();
+  const { startLoading, stopLoading } = useLoading();
   
   const [walletBalance, setWalletBalance] = useState(0);
   const [banks, setBanks] = useState([]);
@@ -39,6 +39,7 @@ const Withdraw = () => {
   const [tierLimits, setTierLimits] = useState(null);
   const [userData, setUserData] = useState(null);
   const [hasRequiredData, setHasRequiredData] = useState(false);
+  const [withdrawFee, setWithdrawFee] = useState(0);
   const [withdrawForm, setWithdrawForm] = useState({
     amount: '',
     accountNumber: '',
@@ -46,10 +47,7 @@ const Withdraw = () => {
     accountName: ''
   });
 
-  // Fee calculation
-  const withdrawAmount = parseFloat(withdrawForm.amount) || 0;
-  const fee = calculateFee('debit_fee', withdrawAmount);
-  const totalWithFee = withdrawAmount + fee;
+
 
   // Custom dropdown state
   const [isBankDropdownOpen, setIsBankDropdownOpen] = useState(false);
@@ -59,12 +57,16 @@ const Withdraw = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const user = await apiService.getUser();
-        setUserData(user);
-        setHasRequiredData(user.phone && user.location);
-      } catch {
-        dispatch(showToast({ message: "Failed to fetch user data.", type: "error" }));
-        navigate("/");
+        const response = await apiService.auth.getProfile();
+        if (response.success) {
+          setUserData(response.data);
+          setHasRequiredData(response.data.phone && response.data.location);
+        } else {
+          dispatch(showToast({ message: response.message || 'Failed to fetch user data.', type: 'error' }));
+        }
+      } catch (error) {
+        dispatch(showToast({ message: 'An error occurred while fetching user data.', type: 'error' }));
+        console.error('Fetch user data error:', error);
       }
     };
 
@@ -509,6 +511,10 @@ const Withdraw = () => {
                     onChange={(e) => {
                       setWithdrawForm(prev => ({ ...prev, accountNumber: e.target.value }));
                       setIsVerified(false);
+                    }}
+                    onBlur={() => {
+                      const fee = calculateFee('debit_fee', parseFloat(withdrawForm.amount) || 0);
+                      setWithdrawFee(fee);
                     }}
                     className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     placeholder="Enter 10-digit account number"

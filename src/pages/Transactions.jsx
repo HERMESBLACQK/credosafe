@@ -53,89 +53,89 @@ const Transactions = () => {
   const [transactions, setTransactions] = useState([]);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
 
+  // Function definitions
+  const fetchBalance = async () => {
+    try {
+      setIsLoadingBalance(true);
+      // Use balance from user profile
+      if (isUserLoaded && userProfile?.wallet?.balance !== undefined) {
+        setUserBalance(userProfile.wallet.balance);
+      } else {
+        setUserBalance(0);
+      }
+    } catch (error) {
+      console.error('Balance error:', error);
+      setUserBalance(0);
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  };
+
+  const fetchTransactions = async () => {
+    try {
+      setIsLoadingTransactions(true);
+      console.log('🔍 Fetching transactions...');
+      const response = await apiService.vouchers.getTransactions();
+      console.log('📊 Transactions response:', response);
+      
+      if (response.success) {
+        setTransactions(response.data || []);
+        console.log('✅ Transactions loaded:', response.data?.length);
+      } else {
+        console.error('❌ Failed to fetch transactions:', response.message);
+        setTransactions([]);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching transactions:', error);
+      setTransactions([]);
+    } finally {
+      setIsLoadingTransactions(false);
+    }
+  };
+
+  const fetchThemes = async () => {
+    try {
+      setLoadingThemes(true);
+      const voucherTypes = ['gift_card', 'work_order', 'purchase_escrow', 'prepaid'];
+      const themesData = {};
+      
+      for (const voucherType of voucherTypes) {
+        try {
+          console.log(`🎨 Fetching themes for ${voucherType}...`);
+        const response = await apiService.themes.getByVoucherType(voucherType);
+        console.log(`🎨 Fetched themes for ${voucherType}:`, response);
+        if (response.success) {
+          themesData[voucherType] = response.data || [];
+            console.log(`🎨 ${voucherType} themes count:`, themesData[voucherType].length);
+          } else {
+            console.warn(`⚠️ Failed to fetch themes for ${voucherType}:`, response.message);
+            themesData[voucherType] = [];
+          }
+        } catch (typeError) {
+          console.error(`❌ Error fetching themes for ${voucherType}:`, typeError);
+          themesData[voucherType] = [];
+        }
+      }
+      
+      console.log('🎨 All themes data:', themesData);
+      setThemes(themesData);
+    } catch (error) {
+      console.error('❌ Overall themes fetch error:', error);
+      setThemes({});
+    } finally {
+      setLoadingThemes(false);
+    }
+  };
+
   useEffect(() => {
     dispatch(fetchVouchers());
 
-    // Use balance from user profile
-    const fetchBalance = () => {
-      try {
-        setIsLoadingBalance(true);
-        // Use balance from user profile
-        if (isUserLoaded && userProfile?.wallet?.balance !== undefined) {
-          setUserBalance(userProfile.wallet.balance);
-        } else {
-          setUserBalance(0);
-        }
-      } catch (error) {
-        console.error('Balance error:', error);
-        setUserBalance(0);
-      } finally {
-        setIsLoadingBalance(false);
-      }
-    };
-
-    // Fetch transactions including voucher creations and redemptions
-    const fetchTransactions = async () => {
-      try {
-        setIsLoadingTransactions(true);
-        console.log('🔍 Fetching transactions...');
-        const response = await apiService.vouchers.getTransactions();
-        console.log('📊 Transactions response:', response);
-        
-        if (response.success) {
-          setTransactions(response.data || []);
-          console.log('✅ Transactions loaded:', response.data?.length);
-        } else {
-          console.error('❌ Failed to fetch transactions:', response.message);
-          setTransactions([]);
-        }
-      } catch (error) {
-        console.error('❌ Error fetching transactions:', error);
-        setTransactions([]);
-      } finally {
-        setIsLoadingTransactions(false);
-      }
-    };
-
-    // Fetch themes for all voucher types
-    const fetchThemes = async () => {
-      try {
-        setLoadingThemes(true);
-        const voucherTypes = ['gift_card', 'work_order', 'purchase_escrow', 'prepaid'];
-        const themesData = {};
-        
-        for (const voucherType of voucherTypes) {
-          try {
-            console.log(`🎨 Fetching themes for ${voucherType}...`);
-          const response = await apiService.themes.getByVoucherType(voucherType);
-          console.log(`🎨 Fetched themes for ${voucherType}:`, response);
-          if (response.success) {
-            themesData[voucherType] = response.data || [];
-              console.log(`🎨 ${voucherType} themes count:`, themesData[voucherType].length);
-            } else {
-              console.warn(`⚠️ Failed to fetch themes for ${voucherType}:`, response.message);
-              themesData[voucherType] = [];
-            }
-          } catch (typeError) {
-            console.error(`❌ Error fetching themes for ${voucherType}:`, typeError);
-            themesData[voucherType] = [];
-          }
-        }
-        
-        console.log('🎨 All themes data:', themesData);
-        setThemes(themesData);
-      } catch (error) {
-        console.error('❌ Overall themes fetch error:', error);
-        setThemes({});
-      } finally {
-        setLoadingThemes(false);
-      }
-    };
-
-    fetchBalance();
-    fetchTransactions();
-    fetchThemes();
-  }, [dispatch, user]);
+    if (isUserLoaded) {
+      fetchBalance();
+      fetchTransactions();
+      fetchThemes();
+    }
+  }, [dispatch, isUserLoaded]);
 
   // Separate useEffect for balance updates when user profile changes
   useEffect(() => {
