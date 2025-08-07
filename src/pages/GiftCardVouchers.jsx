@@ -35,6 +35,7 @@ const GiftCardVouchers = () => {
   const [userBalance, setUserBalance] = useState(0);
   const [selectedDesign, setSelectedDesign] = useState('birthday');
   const [themes, setThemes] = useState([]);
+  const [userData, setUserData] = useState(null);
   const { startLoading, stopLoading, isLoading: checkLoading } = useLoading();
   const [formData, setFormData] = useState({
     giftAmount: '',
@@ -58,6 +59,22 @@ const GiftCardVouchers = () => {
     const fetchData = async () => {
       try {
         startLoading('fetch-data', 'Loading data...');
+        
+        // Fetch user data
+        console.log('🔄 Fetching user data...');
+        const userResponse = await apiService.auth.getProfile();
+        console.log('📡 User data response:', userResponse);
+        
+        if (userResponse.success) {
+          setUserData(userResponse.data);
+          console.log('✅ User data set:', userResponse.data);
+        } else {
+          console.error('❌ User data fetch failed:', userResponse.message);
+          dispatch(showToast({
+            message: userResponse.message || 'Failed to fetch user data',
+            type: 'error'
+          }));
+        }
         
         // Fetch balance
         console.log('🔄 Fetching balance...');
@@ -140,18 +157,32 @@ const GiftCardVouchers = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Check if user has sufficient balance (amount + fee)
-    if (userBalance < totalWithFee) {
+    // Validate user data
+    if (!userData) {
       dispatch(showToast({
-        message: `Insufficient balance. You need ₦${totalWithFee.toLocaleString()} (including ₦${fee.toLocaleString()} fee) but have ₦${userBalance.toLocaleString()}`,
+        message: 'User data not loaded. Please refresh the page.',
         type: 'error'
       }));
       return;
     }
-    const giftAmount = parseFloat(formData.giftAmount) || 0;
-    if (userBalance < giftAmount) {
+
+    // Check if recipient email is the same as user's email
+    if (formData.recipientEmail.toLowerCase() === userData.email.toLowerCase()) {
       dispatch(showToast({
-        message: `Insufficient balance. You need ₦${giftAmount.toLocaleString()} but have ₦${userBalance.toLocaleString()}`,
+        message: 'You cannot create a voucher for yourself. Please use a different recipient email.',
+        type: 'error'
+      }));
+      return;
+    }
+    
+    // Check if user has sufficient balance (amount + fee)
+    const giftAmount = parseFloat(formData.giftAmount) || 0;
+    const fee = calculateFee('voucher_creation', giftAmount);
+    const totalWithFee = giftAmount + fee;
+    
+    if (userBalance < totalWithFee) {
+      dispatch(showToast({
+        message: `Insufficient balance. You need ₦${totalWithFee.toLocaleString()} (including ₦${fee.toLocaleString()} fee) but have ₦${userBalance.toLocaleString()}`,
         type: 'error'
       }));
       return;

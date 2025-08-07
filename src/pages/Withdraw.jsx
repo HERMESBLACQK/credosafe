@@ -13,7 +13,8 @@ import {
   X,
   Loader,
   Search,
-  ChevronDown
+  ChevronDown,
+  AlertTriangle
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
 import apiService from '../api';
@@ -36,6 +37,8 @@ const Withdraw = () => {
   const [isVerified, setIsVerified] = useState(false);
   const [userTier, setUserTier] = useState(null);
   const [tierLimits, setTierLimits] = useState(null);
+  const [userData, setUserData] = useState(null);
+  const [hasRequiredData, setHasRequiredData] = useState(false);
   const [withdrawForm, setWithdrawForm] = useState({
     amount: '',
     accountNumber: '',
@@ -51,6 +54,22 @@ const Withdraw = () => {
   // Custom dropdown state
   const [isBankDropdownOpen, setIsBankDropdownOpen] = useState(false);
   const [bankSearchTerm, setBankSearchTerm] = useState('');
+
+  // Fetch user data and validate required fields
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const user = await apiService.getUser();
+        setUserData(user);
+        setHasRequiredData(user.phone && user.location);
+      } catch {
+        dispatch(showToast({ message: "Failed to fetch user data.", type: "error" }));
+        navigate("/");
+      }
+    };
+
+    fetchUserData();
+  }, [dispatch, navigate]);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -203,45 +222,53 @@ const Withdraw = () => {
   // Handle withdrawal
   const handleWithdraw = async (e) => {
     e.preventDefault();
-    // Check if user has sufficient balance for amount + fee
-    if (walletBalance < totalWithFee) {
+    
+    // Validate user data
+    if (!userData || !hasRequiredData) {
       dispatch(showToast({
-        message: `Insufficient balance. You need ₦${totalWithFee.toLocaleString()} (including ₦${fee.toLocaleString()} fee) but have ₦${walletBalance.toLocaleString()}`,
+        message: 'Please complete your profile with phone number and location before withdrawing.',
         type: 'error'
       }));
       return;
     }
-    if (!withdrawForm.amount || parseFloat(withdrawForm.amount) < 100) {
-      dispatch(showToast({ type: 'error', message: 'Amount must be at least ₦100' }));
-      return;
-    }
-
-    if (parseFloat(withdrawForm.amount) > walletBalance) {
-      dispatch(showToast({ type: 'error', message: 'Insufficient wallet balance' }));
-      return;
-    }
 
     if (!isVerified) {
-      dispatch(showToast({ type: 'error', message: 'Please verify your account first' }));
+      dispatch(showToast({
+        message: 'Please verify your bank account first.',
+        type: 'error'
+      }));
       return;
     }
 
-    // Check tier limits
-    if (tierLimits) {
-      const withdrawalAmount = parseFloat(withdrawForm.amount);
-      if (withdrawalAmount > tierLimits.daily_withdrawal_limit) {
+    if (!withdrawForm.amount || parseFloat(withdrawForm.amount) <= 0) {
+      dispatch(showToast({
+        message: 'Please enter a valid withdrawal amount.',
+        type: 'error'
+      }));
+      return;
+    }
+
+    const amount = parseFloat(withdrawForm.amount);
+    if (amount > walletBalance) {
+      dispatch(showToast({
+        message: 'Insufficient balance for withdrawal.',
+        type: 'error'
+      }));
+      return;
+    }
+
+    if (tierLimits && amount > tierLimits.daily_withdrawal_limit) {
         dispatch(showToast({ 
-          type: 'error', 
-          message: `Withdrawal amount exceeds your tier's daily limit of ₦${tierLimits.daily_withdrawal_limit.toLocaleString()}` 
+        message: `Withdrawal amount exceeds daily limit of ₦${tierLimits.daily_withdrawal_limit.toLocaleString()}.`,
+        type: 'error'
         }));
         return;
-      }
     }
 
     try {
-      startGlobalLoading();
-      const response = await apiService.payments.withdraw({
-        amount: parseFloat(withdrawForm.amount),
+      startGlobalLoading('Processing withdrawal...');
+      const response = await apiService.wallet.withdraw({
+        amount: amount,
         accountNumber: withdrawForm.accountNumber,
         bankCode: withdrawForm.bankCode,
         accountName: withdrawForm.accountName
@@ -249,16 +276,33 @@ const Withdraw = () => {
 
       if (response.success) {
         dispatch(showToast({ 
-          type: 'success', 
-          message: 'Withdrawal initiated successfully. You will receive the funds within 24 hours.' 
+          message: 'Withdrawal request submitted successfully!',
+          type: 'success'
         }));
-        navigate('/wallet');
+        
+        // Reset form
+        setWithdrawForm({
+          amount: '',
+          accountNumber: '',
+          bankCode: '',
+          accountName: ''
+        });
+        setIsVerified(false);
+        
+        // Refresh balance
+        await fetchWalletBalance();
       } else {
-        dispatch(showToast({ type: 'error', message: response.message }));
+        dispatch(showToast({
+          message: response.message || 'Withdrawal failed.',
+          type: 'error'
+        }));
       }
     } catch (error) {
-      console.error('Error initiating withdrawal:', error);
-      dispatch(showToast({ type: 'error', message: 'Failed to initiate withdrawal' }));
+      console.error('Withdrawal error:', error);
+      dispatch(showToast({
+        message: 'Withdrawal failed. Please try again.',
+        type: 'error'
+      }));
     } finally {
       stopGlobalLoading();
     }
@@ -309,17 +353,37 @@ const Withdraw = () => {
               <span className="text-xl font-bold text-neutral-900">CredoSafe</span>
             </motion.div>
             <motion.button 
-              onClick={() => navigate('/wallet')}
+              onClick={() => navigate('/dashboard')}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               className="flex items-center space-x-2 text-neutral-600 hover:text-primary-600 transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
-              <span>Back to Wallet</span>
+              <span>Back to Dashboard</span>
             </motion.button>
           </div>
         </div>
       </header>
+
+      {/* Validation Alert */}
+      {userData && !hasRequiredData && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4">
+          <div className="flex">
+            <AlertTriangle className="w-5 h-5 text-red-400" />
+            <div className="ml-3">
+              <p className="text-sm text-red-700">
+                <strong>Profile Incomplete:</strong> Please add your phone number and location to your profile before withdrawing funds.
+              </p>
+              <button
+                onClick={() => navigate('/profile')}
+                className="mt-2 text-sm text-red-600 hover:text-red-500 underline"
+              >
+                Complete Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

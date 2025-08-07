@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -8,12 +8,83 @@ import {
   Handshake,
   CreditCard,
   Gift,
-  Plus
+  Plus,
+  AlertTriangle
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
+import apiService from '../api/index';
+import { useDispatch } from 'react-redux';
+import { showToast } from '../store/slices/uiSlice';
 
 const CreateVoucher = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [hasRequiredData, setHasRequiredData] = useState(false);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const user = await apiService.getUser();
+        setUserData(user);
+        setHasRequiredData(user.phone && user.location);
+      } catch {
+        dispatch(showToast({ message: "Failed to fetch user data.", type: "error" }));
+        navigate("/"); // Redirect to home if user data cannot be fetched
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [dispatch, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-primary-50 pb-24 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-neutral-600">Loading user data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-primary-50 pb-24 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-neutral-600">User data not found. Please ensure you are logged in.</p>
+          <button
+            onClick={() => navigate("/login")}
+            className="mt-4 bg-primary-600 text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasRequiredData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-primary-50 pb-24 flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="w-16 h-16 text-red-500 mb-4" />
+          <h2 className="text-2xl font-bold text-neutral-900 mb-2">Incomplete Profile</h2>
+          <p className="text-neutral-600 mb-6">
+            To create vouchers, you need to complete your profile. Please add your phone number and location.
+          </p>
+          <button
+            onClick={() => navigate("/profile")}
+            className="bg-primary-600 text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity"
+          >
+            Complete Profile
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },

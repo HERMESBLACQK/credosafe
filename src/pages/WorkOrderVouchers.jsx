@@ -32,6 +32,7 @@ const WorkOrderVouchers = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [userBalance, setUserBalance] = useState(0);
   const [themes, setThemes] = useState([]);
+  const [userData, setUserData] = useState(null);
   const { startLoading, stopLoading, isLoading: checkLoading } = useLoading();
   const [formData, setFormData] = useState({
     projectTitle: '',
@@ -51,6 +52,22 @@ const WorkOrderVouchers = () => {
     const fetchData = async () => {
       try {
         startLoading('fetch-data', 'Loading data...');
+        
+        // Fetch user data
+        console.log('🔄 Fetching user data...');
+        const userResponse = await apiService.auth.getProfile();
+        console.log('📡 User data response:', userResponse);
+        
+        if (userResponse.success) {
+          setUserData(userResponse.data);
+          console.log('✅ User data set:', userResponse.data);
+        } else {
+          console.error('❌ User data fetch failed:', userResponse.message);
+          dispatch(showToast({
+            message: userResponse.message || 'Failed to fetch user data',
+            type: 'error'
+          }));
+        }
         
         // Fetch balance
         console.log('🔄 Fetching balance...');
@@ -157,6 +174,25 @@ const WorkOrderVouchers = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate user data
+    if (!userData) {
+      dispatch(showToast({
+        message: 'User data not loaded. Please refresh the page.',
+        type: 'error'
+      }));
+      return;
+    }
+
+    // Check if client email is the same as user's email
+    if (formData.clientEmail.toLowerCase() === userData.email.toLowerCase()) {
+      dispatch(showToast({
+        message: 'You cannot create a work order voucher for yourself. Please use a different client email.',
+        type: 'error'
+      }));
+      return;
+    }
+    
     const amount = parseFloat(formData.totalAmount) || 0;
     const fee = calculateFee('voucher_creation', amount);
     const totalWithFee = amount + fee;
