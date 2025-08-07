@@ -37,6 +37,11 @@ const Wallet = () => {
   const dispatch = useDispatch();
   const { startGlobalLoading, stopGlobalLoading } = useLoading();
   
+  // Function to handle navigation to transactions with current balance
+  const handleViewAllTransactions = () => {
+    navigate('/wallet/transactions', { state: { currentBalance: walletBalance } });
+  };
+  
   const [showBalance, setShowBalance] = useState(true);
   const [showFundModal, setShowFundModal] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
@@ -353,12 +358,12 @@ const Wallet = () => {
           <div className="bg-white rounded-2xl shadow-soft overflow-hidden">
             <div className="p-6 border-b border-neutral-200 flex justify-between items-center">
               <h2 className="text-xl font-bold text-neutral-900">Recent Transactions</h2>
-              <button
-                onClick={() => navigate('/wallet-transactions')}
-                className="text-primary-600 hover:text-primary-700 font-medium flex items-center space-x-1"
+              <button 
+                onClick={handleViewAllTransactions}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center"
               >
-                <span>View All</span>
-                <ArrowRight className="w-4 h-4" />
+                View All
+                <ArrowRight className="w-4 h-4 ml-1" />
               </button>
             </div>
             <div className="divide-y divide-neutral-200">
