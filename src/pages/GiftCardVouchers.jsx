@@ -179,8 +179,16 @@ const GiftCardVouchers = () => {
       return;
     }
 
-    // Check if recipient email is the same as user's email
-    if (formData.recipientEmail.toLowerCase() === userData.email.toLowerCase()) {
+    // Check if recipient email is provided and not the same as user's email
+    if (!formData.recipientEmail) {
+      dispatch(showToast({
+        message: 'Recipient email is required',
+        type: 'error'
+      }));
+      return;
+    }
+
+    if (userData.email && formData.recipientEmail.toLowerCase() === userData.email.toLowerCase()) {
       dispatch(showToast({
         message: 'You cannot create a voucher for yourself. Please use a different recipient email.',
         type: 'error'

@@ -190,8 +190,16 @@ const WorkOrderVouchers = () => {
       return;
     }
 
-    // Check if client email is the same as user's email
-    if (formData.clientEmail.toLowerCase() === userData.email.toLowerCase()) {
+    // Check if client email is provided and not the same as user's email
+    if (!formData.clientEmail) {
+      dispatch(showToast({
+        message: 'Client email is required',
+        type: 'error'
+      }));
+      return;
+    }
+
+    if (userData.email && formData.clientEmail.toLowerCase() === userData.email.toLowerCase()) {
       dispatch(showToast({
         message: 'You cannot create a work order voucher for yourself. Please use a different client email.',
         type: 'error'

@@ -591,7 +591,7 @@ const PurchaseEscrowVouchers = () => {
                       <div className="border-t border-neutral-200 pt-2">
                         <div className="flex justify-between items-center">
                           <span className="font-semibold text-neutral-900">Total:</span>
-                          <span className="text-lg font-bold text-green-600">₦{feeLoading ? '...' : (value + voucherFee).toFixed(2)}</span>
+                          <span className="text-lg font-bold text-green-600">₦{feeLoading ? '...' : (parseFloat(formData.itemValue || 0) + voucherFee).toFixed(2)}</span>
                         </div>
                       </div>
                     </div>
