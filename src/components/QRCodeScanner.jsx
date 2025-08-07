@@ -1,52 +1,82 @@
-import React, { useEffect } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import React, { useEffect, useRef, useState } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
 import { X } from 'lucide-react';
 
 const QRCodeScanner = ({ onScan, onClose, onError }) => {
+  const html5QrCodeRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [isScannerActive, setIsScannerActive] = useState(true);
+  const [statusMessage, setStatusMessage] = useState('Initializing camera...');
+  const readerId = 'qr-code-reader';
   useEffect(() => {
-    const scanner = new Html5QrcodeScanner(
-      'qr-code-reader',
-      {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        rememberLastUsedCamera: true,
-        supportedScanTypes: [0, 1] // 0 for camera, 1 for file
-      },
-      false // verbose
-    );
+    html5QrCodeRef.current = new Html5Qrcode(readerId);
 
-    let isScanning = true;
-
-    const handleSuccess = (decodedText, decodedResult) => {
-      if (isScanning) {
-        console.log(`Scan result: ${decodedText}`, decodedResult);
-        isScanning = false; // Prevent multiple scans
-        scanner.clear();
-        onScan(decodedText);
+    const startScanner = async () => {
+      try {
+        await html5QrCodeRef.current.start(
+          { facingMode: 'environment' },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          (decodedText) => {
+            onScan(decodedText);
+            stopScanner();
+          },
+          (errorMessage) => {
+             // This callback is for continuous scanning feedback, not just errors
+             if (!errorMessage.includes('No QR code found')) {
+                setStatusMessage('Point camera at a QR code.');
+             }
+          }
+        );
+        setStatusMessage('Scanning...');
+      } catch (err) {
+        console.error('Error starting scanner:', err);
+        setStatusMessage('Failed to start camera. Check permissions.');
+        if (onError) onError('Failed to start camera.');
       }
     };
 
-    const handleError = (errorMessage) => {
-      // Don't log 'QR code parse error', it's too frequent
-      if (!errorMessage.includes('QR code parse error')) {
-        console.error(`QR Scanner Error: ${errorMessage}`);
-        if (onError) {
-          onError(errorMessage);
+    const stopScanner = () => {
+        if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+            html5QrCodeRef.current.stop().catch(err => console.error('Failed to stop scanner', err));
         }
-      }
     };
 
-    scanner.render(handleSuccess, handleError);
+    if (isScannerActive) {
+      startScanner();
+    } else {
+      stopScanner();
+    }
 
-    // Cleanup function to stop the scanner
     return () => {
-      if (scanner) {
-        scanner.clear().catch(error => {
-          console.error('Failed to clear html5-qrcode-scanner.', error);
-        });
-      }
+      stopScanner();
     };
-  }, [onScan, onError]);
+  }, [isScannerActive, onScan, onError]);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsScannerActive(false);
+    setStatusMessage('Scanning file...');
+
+    if (html5QrCodeRef.current) {
+        html5QrCodeRef.current.scanFile(file, true)
+        .then(decodedText => {
+            onScan(decodedText);
+        })
+        .catch(err => {
+            console.error('Error scanning file:', err);
+            setStatusMessage('Could not read QR code from file.');
+            if (onError) onError('Could not scan QR code from file.');
+        })
+        .finally(() => {
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        });
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -62,11 +92,31 @@ const QRCodeScanner = ({ onScan, onClose, onError }) => {
           </button>
         </div>
         
-        <div id="qr-code-reader" className="w-full"></div>
+        <div className="bg-gray-900 text-white p-4 rounded-lg min-h-[318px] flex flex-col items-center justify-center">
+          <div id={readerId} className="w-full rounded-md overflow-hidden"></div>
+          <p className="mt-2 text-sm text-gray-400">{statusMessage}</p>
+        </div>
 
-        <div className="text-center text-sm text-gray-500 mt-4">
-          <p>Point your camera at the QR code.</p>
-          <p>You can also upload an image using the button in the scanner view.</p>
+        <div className="flex items-center justify-center mt-4 space-x-4">
+          <button 
+            onClick={() => fileInputRef.current && fileInputRef.current.click()}
+            className="bg-primary-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+          >
+            Upload Image
+          </button>
+          <button 
+            onClick={() => setIsScannerActive(true)}
+            className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+          >
+            Use Camera
+          </button>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            className="hidden" 
+            accept="image/*"
+          />
         </div>
       </div>
     </div>
