@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { 
   Shield, 
@@ -21,7 +21,8 @@ import {
   ArrowRight,
   CreditCard,
   Building,
-  Phone
+  Phone,
+  Copy
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
 import apiService from '../api';
@@ -33,18 +34,14 @@ import useFeeSettings from '../hooks/useFeeSettings';
 const Wallet = () => {
   const { fees, loading: feeLoading, error: feeError, calculateFee } = useFeeSettings();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const dispatch = useDispatch();
   const { startGlobalLoading, stopGlobalLoading } = useLoading();
-  
-  // Function to handle navigation to transactions with current balance
-  const handleViewAllTransactions = () => {
-    navigate('/wallet/transactions', { state: { currentBalance: walletBalance } });
-  };
   
   const [showBalance, setShowBalance] = useState(true);
   const [showFundModal, setShowFundModal] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
+  const [copiedRef, setCopiedRef] = useState(null);
 
   // Fee calculation for funding
   const fundValue = parseFloat(fundAmount) || 0;
@@ -168,9 +165,10 @@ const Wallet = () => {
 
   // Check for payment status from URL params
   useEffect(() => {
-    const status = searchParams.get('status');
-    const amount = searchParams.get('amount');
-    const message = searchParams.get('message');
+    const params = new URLSearchParams(location.search || '');
+    const status = params.get('status');
+    const amount = params.get('amount');
+    const message = params.get('message');
 
     if (status === 'success') {
       dispatch(showToast({ 
@@ -186,7 +184,7 @@ const Wallet = () => {
         message: message || 'Payment failed. Please try again.' 
       }));
     }
-  }, [searchParams, dispatch]);
+  }, [location.search, dispatch]);
 
   // Fetch rate when modal opens or currency changes
   useEffect(() => {
@@ -358,12 +356,12 @@ const Wallet = () => {
           <div className="bg-white rounded-2xl shadow-soft overflow-hidden">
             <div className="p-6 border-b border-neutral-200 flex justify-between items-center">
               <h2 className="text-xl font-bold text-neutral-900">Recent Transactions</h2>
-              <button 
-                onClick={handleViewAllTransactions}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center"
+              <button
+                onClick={() => navigate('/wallet-transactions', { state: { balance: walletBalance } })}
+                className="text-primary-600 hover:text-primary-700 font-medium flex items-center space-x-1"
               >
-                View All
-                <ArrowRight className="w-4 h-4 ml-1" />
+                <span>View All</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
             <div className="divide-y divide-neutral-200">
@@ -379,7 +377,7 @@ const Wallet = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className="flex-shrink-0">
-                          {getTransactionIcon(transaction.type)}
+                          {getTransactionIcon(transaction.type === 'credit' ? 'funding' : 'withdrawal')}
                         </div>
                         <div>
                           <p className="font-medium text-neutral-900">
@@ -388,21 +386,41 @@ const Wallet = () => {
                           <div className="flex items-center space-x-4 text-sm text-neutral-500 mt-1">
                             <span className="flex items-center space-x-1">
                               <Calendar className="w-4 h-4" />
-                              <span>{formatDate(transaction.date)}</span>
+                              <span>{formatDate(transaction.created_at || transaction.date)}</span>
                             </span>
                             <span className="flex items-center space-x-1">
                               <Clock className="w-4 h-4" />
-                              <span>{formatTime(transaction.date)}</span>
+                              <span>{formatTime(transaction.created_at || transaction.date)}</span>
                             </span>
                           </div>
-                          <p className="text-xs text-neutral-400 mt-1">
-                            Ref: {transaction.reference}
-                          </p>
+                          <div className="flex items-center gap-2 text-xs text-neutral-400 mt-1">
+                            <span>
+                              Ref: {transaction.reference ? `${String(transaction.reference).slice(0,6)}...${String(transaction.reference).slice(-4)}` : '—'}
+                            </span>
+                            {transaction.reference && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    await navigator.clipboard.writeText(String(transaction.reference));
+                                    setCopiedRef(transaction.id);
+                                    setTimeout(() => setCopiedRef(null), 1200);
+                                  } catch (e) {
+                                    dispatch(showToast({ type: 'error', message: 'Failed to copy reference' }));
+                                  }
+                                }}
+                                className="inline-flex items-center text-neutral-500 hover:text-neutral-700"
+                                title="Copy reference"
+                              >
+                                {copiedRef === transaction.id ? <CheckCircle className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`font-bold text-lg ${getTypeColor(transaction.type)}`}>
-                          {transaction.type === 'funding' ? '+' : ''}{formatCurrency(transaction.amount)}
+                        <p className={`font-bold text-lg ${getTypeColor(transaction.type === 'credit' ? 'funding' : 'withdrawal')}`}>
+                          {transaction.type === 'credit' ? '+' : '-'}{formatCurrency(Math.abs(Number(transaction.amount) || 0))}
                         </p>
                         <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(transaction.status)}`}>
                           {transaction.status}
