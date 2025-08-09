@@ -172,39 +172,37 @@ const SignIn = () => {
 
       const response = await apiService.auth.login(loginPayload);
 
-      if (response.success) {
-        if (response.data?.requiresOTP) {
-          // User has 2FA enabled, show OTP modal
-          setLoginData(response.data);
+      // Handle success shape
+      if (response?.success) {
+        const data = response.data || response;
+        if (data?.requiresOTP) {
+          // 2FA OTP flow
+          setLoginData(data);
           setShowOTPModal(true);
-          dispatch(showToast({ 
-            message: 'Please check your email for the verification code', 
-            type: 'info' 
-          }));
-        } else if (response.data?.emailNotVerified) {
-          // User's email is not verified, show email verification modal
+          dispatch(showToast({ message: data.message || 'Please check your email for the verification code', type: 'info' }));
+        } else if (data?.emailNotVerified || data?.requiresEmailVerification) {
+          // Email not verified flow
           setEmailForVerification(formData.email);
           setShowEmailVerificationModal(true);
-          dispatch(showToast({ 
-            message: 'Please verify your email address before signing in', 
-            type: 'warning' 
-          }));
+          dispatch(showToast({ message: data.message || 'Please verify your email address before signing in', type: 'warning' }));
         } else {
-          // No 2FA required, proceed with login
-          await completeLogin(response.data);
+          await completeLogin(data);
         }
       } else {
-        dispatch(showToast({ 
-          message: response.error || response.message || 'Login failed. Please try again.', 
-          type: 'error' 
-        }));
+        dispatch(showToast({ message: response?.message || 'Login failed. Please try again.', type: 'error' }));
       }
     } catch (error) {
       console.error('Login error:', error);
-      dispatch(showToast({ 
-        message: 'Login failed. Please check your connection and try again.', 
-        type: 'error' 
-      }));
+      // Surface server-provided error messages
+      const serverData = error?.response?.data;
+      if (serverData?.requiresOTP || serverData?.requiresEmailVerification) {
+        setEmailForVerification(formData.email);
+        setShowEmailVerificationModal(true);
+        dispatch(showToast({ message: serverData.message || 'Email not verified. A verification code has been sent to your email.', type: 'warning' }));
+      } else {
+        const msg = serverData?.message || error?.message || 'Login failed. Please try again.';
+        dispatch(showToast({ message: msg, type: 'error' }));
+      }
     } finally {
       setIsSubmitting(false);
       stopLoading('signin');

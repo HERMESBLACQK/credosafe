@@ -113,7 +113,7 @@ const SignUp = () => {
       // Call registration API
       const response = await apiService.auth.register(payload);
       
-      if (response.success) {
+      if (response?.success) {
         console.log('📝 Registration response:', response);
         console.log('🎫 Token from registration:', response.data?.token);
         
@@ -138,16 +138,14 @@ const SignUp = () => {
         }));
       } else {
         dispatch(showToast({ 
-          message: response.error || response.message || 'Registration failed. Please try again.', 
+          message: response?.message || 'Registration failed. Please try again.', 
           type: 'error' 
         }));
       }
     } catch (error) {
       console.error('Registration error:', error);
-      dispatch(showToast({ 
-        message: 'Registration failed. Please check your connection and try again.', 
-        type: 'error' 
-      }));
+      const msg = error?.response?.data?.message || error?.message || 'Registration failed. Please try again.';
+      dispatch(showToast({ message: msg, type: 'error' }));
     } finally {
       setIsSubmitting(false);
       stopLoading('signup');
