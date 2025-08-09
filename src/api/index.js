@@ -5,7 +5,6 @@ import {
   isSensitiveEndpoint, 
   getSecurityHeaders, 
   secureTokenStorage, 
-  clearSensitiveCache,
   sanitizeForLogging 
 } from '../utils/security';
 
@@ -536,7 +535,7 @@ const apiService = {
         return response.data;
       } catch (error) {
         // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
+        const serverMessage = error.response?.data?.message || error.response?.data?.error;
         if (serverMessage) {
           throw new Error(serverMessage);
         } else {
@@ -697,7 +696,7 @@ const apiService = {
         return response.data;
       } catch (error) {
         // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
+        const serverMessage = error.response?.data?.message || error.response?.data?.error;
         if (serverMessage) {
           throw new Error(serverMessage);
         } else {
@@ -714,7 +713,7 @@ const apiService = {
         return response.data;
       } catch (error) {
         // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
+        const serverMessage = error.response?.data?.message || error.response?.data?.error;
         if (serverMessage) {
           throw new Error(serverMessage);
         } else {

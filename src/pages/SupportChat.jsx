@@ -29,7 +29,28 @@ const SupportChat = () => {
       setIsLoading(true);
       const response = await supportChatService.getConversations();
       console.log('📥 [USER SUPPORT CHAT] Conversations loaded:', response);
-      setConversations(response.data || []);
+      const baseConvos = response.data || [];
+      // If server did not provide participants_count, enrich by fetching details in background
+      setConversations(baseConvos);
+      // Fire-and-forget enrichment for counts
+      Promise.all(
+        baseConvos.map(async (c) => {
+          try {
+            const details = await supportChatService.getConversationDetails(c.id);
+            return {
+              id: c.id,
+              participants_count: Array.isArray(details.data?.participants) ? details.data.participants.length : undefined,
+            };
+          } catch {
+            return { id: c.id };
+          }
+        })
+      ).then((counts) => {
+        setConversations((prev) => prev.map((c) => {
+          const found = counts.find((x) => x.id === c.id);
+          return found && typeof found.participants_count === 'number' ? { ...c, participants_count: found.participants_count } : c;
+        }));
+      });
       console.log('📥 [USER SUPPORT CHAT] Conversations state updated:', response.data?.length || 0, 'conversations');
     } catch (error) {
       console.error('❌ [USER SUPPORT CHAT] Error loading conversations:', error);
@@ -197,6 +218,9 @@ const SupportChat = () => {
                           </div>
                           <p className="text-sm text-gray-500 mb-2">
                             {conversation.issue_type} • {conversation.message_count || 0} messages
+                            {typeof conversation.participants_count === 'number' && (
+                              <> • {conversation.participants_count} participant{conversation.participants_count === 1 ? '' : 's'}</>
+                            )}
                           </p>
                           <div className="flex items-center gap-2">
                             <span className={cn(

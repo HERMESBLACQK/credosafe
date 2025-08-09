@@ -24,16 +24,19 @@ const MessageBubble = ({ message, isOwnMessage, participants, currentUserId }) =
     }
   };
 
-  const getParticipantLabel = (senderType) => {
+  const getParticipantLabel = (senderType, senderId) => {
+    if (senderType === 'admin') return 'Admin';
+    const participant = participants?.find(p => p.user_id === senderId);
+    if (participant) {
+      const name = `${participant.first_name || ''} ${participant.last_name || ''}`.trim();
+      if (name) return name;
+      if (participant.email) return participant.email;
+    }
     switch (senderType) {
-      case 'admin':
-        return 'Admin';
       case 'voucher_owner':
         return 'Voucher Owner';
       case 'voucher_recipient':
         return 'Voucher Recipient';
-      case 'user':
-        return 'User';
       default:
         return 'User';
     }
@@ -77,7 +80,7 @@ const MessageBubble = ({ message, isOwnMessage, participants, currentUserId }) =
   return (
     <div className={cn(
       "flex gap-3 mb-4",
-      isOwnMessage ? "flex-row-reverse" : "flex-row"
+      isOwnMessage ? "flex-row-reverse justify-end" : "flex-row justify-start"
     )}>
       {/* Avatar */}
       <div className={cn(
@@ -105,7 +108,7 @@ const MessageBubble = ({ message, isOwnMessage, participants, currentUserId }) =
 
       {/* Message Content */}
       <div className={cn(
-        "flex-1 max-w-[70%]",
+         "flex-1 max-w-[80%] md:max-w-[70%]",
         isOwnMessage ? "order-1" : "order-2"
       )}>
         {/* Participant Label */}
@@ -118,7 +121,7 @@ const MessageBubble = ({ message, isOwnMessage, participants, currentUserId }) =
             "px-2 py-1 rounded-full border",
             getParticipantColor(message.sender_type)
           )}>
-            {getParticipantLabel(message.sender_type)}
+            {getParticipantLabel(message.sender_type, message.sender_id)}
           </span>
         </div>
 
@@ -126,8 +129,8 @@ const MessageBubble = ({ message, isOwnMessage, participants, currentUserId }) =
         <div className={cn(
           "rounded-2xl px-4 py-3 shadow-sm",
           isOwnMessage 
-            ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white ml-auto" 
-            : "bg-white border border-gray-200 text-gray-900"
+            ? "bg-blue-600 text-white ml-auto border border-blue-600 shadow-md"
+            : "bg-white border border-gray-200 text-gray-900 shadow-sm"
         )}>
           {/* Image Message */}
           {isImage && (

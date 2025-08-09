@@ -37,6 +37,10 @@ const ChatInterface = ({ conversation, onBack, currentUserId }) => {
       setIsLoading(true);
       const response = await supportChatService.getConversationDetails(conversation.id);
       setMessages(response.data.messages || []);
+      // Update participants on the conversation object so header can show correct count
+      if (response.data.participants && Array.isArray(response.data.participants)) {
+        conversation.participants = response.data.participants;
+      }
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -171,6 +175,14 @@ const ChatInterface = ({ conversation, onBack, currentUserId }) => {
                 <span className="text-sm text-gray-500">
                   {conversation.issue_type}
                 </span>
+                {Array.isArray(conversation.participants) && (
+                  <>
+                    <span className="text-sm text-gray-400">•</span>
+                    <span className="text-sm text-gray-500">
+                      {conversation.participants.length} participant{conversation.participants.length === 1 ? '' : 's'}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
