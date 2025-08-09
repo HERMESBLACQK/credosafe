@@ -27,6 +27,7 @@ import WalletTransactions from './pages/WalletTransactions';
 import Withdraw from './pages/Withdraw';
 import FAQ from './pages/FAQ';
 import Referral from './pages/Referral';
+import SupportChat from './pages/SupportChat';
 
 // Landing Page Components
 import LandingPage from './pages/landingpage/LandingPage';
@@ -129,6 +130,7 @@ const AppContent = () => {
           <Route path="/withdraw" element={<PrivateRoute><Withdraw /></PrivateRoute>} />
           <Route path="/faq" element={<PrivateRoute><FAQ /></PrivateRoute>} />
           <Route path="/referral" element={<PrivateRoute><Referral /></PrivateRoute>} />
+          <Route path="/support-chat" element={<PrivateRoute><SupportChat /></PrivateRoute>} />
           
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/landingpage" replace />} />

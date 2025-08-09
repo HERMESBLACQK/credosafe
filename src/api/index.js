@@ -235,7 +235,13 @@ const apiService = {
         const response = await apiClient.post('/auth/login', credentials);
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Login failed');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        }
       }
     },
 
@@ -244,7 +250,13 @@ const apiService = {
         const response = await apiClient.post('/auth/register', userData);
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Registration failed');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        }
       }
     },
 
@@ -253,7 +265,13 @@ const apiService = {
         const response = await apiClient.post('/auth/verify-otp', otpData);
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'OTP verification failed');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        }
       }
     },
 
@@ -262,7 +280,13 @@ const apiService = {
         const response = await apiClient.post('/auth/verify-login-otp', otpData, { cacheKey: null }); // No cache for OTP
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Login OTP verification failed');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -272,7 +296,13 @@ const apiService = {
         const response = await apiClient.post('/auth/request-password-reset', data, { cacheKey: null });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to request password reset');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
     verifyPasswordResetOtp: async (data) => {
@@ -280,7 +310,13 @@ const apiService = {
         const response = await apiClient.post('/auth/verify-reset-otp', data, { cacheKey: null });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to verify OTP');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
     resetPassword: async (data) => {
@@ -288,7 +324,13 @@ const apiService = {
         const response = await apiClient.post('/auth/reset-password', data, { cacheKey: null });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to reset password');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -298,7 +340,13 @@ const apiService = {
         const response = await apiClient.post('/auth/send-password-otp', {}, { cacheKey: null });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to send OTP');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -307,7 +355,13 @@ const apiService = {
         const response = await apiClient.post('/auth/verify-password-otp', { otp }, { cacheKey: null });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to verify OTP');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -316,7 +370,13 @@ const apiService = {
         const response = await apiClient.put('/auth/change-password', data, { cacheKey: null });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to change password');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -328,7 +388,13 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch profile');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -337,7 +403,13 @@ const apiService = {
         const response = await apiClient.post('/auth/logout');
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Logout failed');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -346,7 +418,13 @@ const apiService = {
         const response = await apiClient.post('/auth/refresh');
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Token refresh failed');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -358,7 +436,13 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch tier');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -370,7 +454,13 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch tier limits');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -379,7 +469,13 @@ const apiService = {
         const response = await apiClient.post('/auth/upgrade-tier', tierData);
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to upgrade tier');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -391,7 +487,13 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch devices');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -400,7 +502,13 @@ const apiService = {
         const response = await apiClient.put('/auth/profile', profileData);
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to update profile');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -409,7 +517,13 @@ const apiService = {
         const response = await apiClient.put('/auth/settings', settingsData);
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to update settings');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     }
   },
@@ -421,7 +535,13 @@ const apiService = {
         const response = await apiClient.get(`/public-vouchers/${voucherCode}`);
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to search for voucher');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     }
   },
@@ -437,7 +557,13 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch vouchers');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -450,7 +576,13 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch transactions');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -462,7 +594,13 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch voucher');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -473,7 +611,13 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to create voucher');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -484,7 +628,13 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to create work order voucher');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -495,7 +645,13 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to create purchase escrow voucher');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -506,7 +662,13 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to create prepaid voucher');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -517,7 +679,13 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to create gift card voucher');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -528,7 +696,13 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to redeem voucher');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -539,7 +713,13 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to redeem voucher');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -550,7 +730,13 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to confirm cancellation');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -559,7 +745,13 @@ const apiService = {
         const response = await apiClient.post('/vouchers/request-redemption-otp', { voucherCode });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to request redemption OTP');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -568,7 +760,13 @@ const apiService = {
         const response = await apiClient.post('/vouchers/verify-redemption-otp', { voucherCode, otp });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to verify redemption OTP');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -579,7 +777,13 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to cancel voucher');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -590,7 +794,13 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to activate voucher');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -601,7 +811,13 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to activate voucher');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -612,7 +828,13 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to cancel voucher');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -623,7 +845,13 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to release milestone');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -635,7 +863,13 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch balance');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -647,7 +881,13 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to search voucher');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -660,7 +900,13 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to upload voucher');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     }
   },
@@ -679,7 +925,13 @@ const apiService = {
       } catch (error) {
         console.error(`🎨 API: Error fetching themes for ${voucherType}:`, error);
         console.error(`🎨 API: Error response:`, error.response?.data);
-        throw new Error(error.response?.data?.message || 'Failed to fetch themes');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     }
   },
@@ -694,7 +946,13 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch transactions');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     }
   },
@@ -707,7 +965,13 @@ const apiService = {
         const response = await apiClient.post('/payments/fund-wallet', paymentData);
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to initialize payment');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -721,7 +985,13 @@ const apiService = {
         return response.data;
       } catch (error) {
         console.error('❌ Error fetching wallet balance:', error);
-        throw new Error(error.response?.data?.message || 'Failed to fetch wallet balance');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -740,7 +1010,13 @@ const apiService = {
         return response.data;
       } catch (error) {
         console.error('❌ Error fetching wallet transactions:', error);
-        throw new Error(error.response?.data?.message || 'Failed to fetch wallet transactions');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -750,7 +1026,13 @@ const apiService = {
         const response = await apiClient.get('/payments/banks');
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch banks');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -760,7 +1042,13 @@ const apiService = {
         const response = await apiClient.post('/payments/verify-account', accountData);
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to verify bank account');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -770,7 +1058,13 @@ const apiService = {
         const response = await apiClient.post('/payments/withdraw', withdrawalData);
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to initiate withdrawal');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     },
 
@@ -783,7 +1077,13 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch withdrawals');
+        // Show server error message directly
+        const serverMessage = error.response?.data?.message ;
+        if (serverMessage) {
+          throw new Error(serverMessage);
+        } else {
+          throw new Error('Network error: Unable to connect to server');
+        };
       }
     }
   }

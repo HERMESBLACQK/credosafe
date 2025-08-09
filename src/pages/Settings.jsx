@@ -18,7 +18,8 @@ import {
   Smartphone,
   Monitor,
   Users,
-  Gift
+  Gift,
+  MessageSquare
 } from 'lucide-react';
 import { logoutUser, updateUser } from '../store/slices/authSlice';
 import { showToast } from '../store/slices/uiSlice';
@@ -262,6 +263,12 @@ const Settings = () => {
           description: 'Frequently asked questions and contact information',
           type: 'navigation',
           action: () => navigate('/faq')
+        },
+        { 
+          label: 'Support Chat', 
+          description: 'Get help through our live chat system',
+          type: 'navigation',
+          action: () => navigate('/support-chat')
         }
       ]
     },
