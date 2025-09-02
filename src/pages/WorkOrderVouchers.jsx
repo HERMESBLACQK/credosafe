@@ -26,14 +26,13 @@ import useFeeSettings from '../hooks/useFeeSettings';
 
 const WorkOrderVouchers = () => {
   const navigate = useNavigate();
-  const { fees, loading: feeLoading, error: feeError, calculateFee } = useFeeSettings();
+  const { calculateFee } = useFeeSettings();
   const dispatch = useDispatch();
   const [selectedDesign, setSelectedDesign] = useState('professional');
   const [showBalance, setShowBalance] = useState(true);
   const [userBalance, setUserBalance] = useState(0);
   const [themes, setThemes] = useState([]);
   const [userData, setUserData] = useState(null);
-  const [voucherFee, setVoucherFee] = useState(0);
   const { startLoading, stopLoading, isLoading: checkLoading } = useLoading();
   const [formData, setFormData] = useState({
     projectTitle: '',
@@ -100,8 +99,8 @@ const WorkOrderVouchers = () => {
           console.error('Failed to fetch themes:', themesResponse.message);
         }
       } catch (error) {
-        console.error('❌ Data fetch error:', error);
-        console.error('❌ Error details:', error.message);
+        console.error('\u274c Data fetch error:', error);
+        console.error('\u274c Error details:', error.message);
         dispatch(showToast({
           message: `Failed to fetch data: ${error.message}`,
           type: 'error'
@@ -111,7 +110,7 @@ const WorkOrderVouchers = () => {
       }
     };
     fetchData();
-  }, [dispatch]);
+  }, [dispatch, startLoading, stopLoading]);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 60 },
@@ -126,8 +125,8 @@ const WorkOrderVouchers = () => {
     }));
 
     if (field === 'totalAmount') {
-      const fee = calculateFee('voucher_creation', parseFloat(value) || 0);
-      setVoucherFee(fee);
+      // const fee = calculateFee('voucher_creation', parseFloat(value) || 0);
+      // setVoucherFee(fee);
     }
   };
 

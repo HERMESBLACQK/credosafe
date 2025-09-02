@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { loginUser } from '../store/slices/authSlice';
 import { showToast } from '../store/slices/uiSlice';
-import { useError } from '../contexts/ErrorContext';
 import apiService from '../api/index';
 import OTPModal from '../components/OTPModal';
 import { useLoading } from '../contexts/LoadingContext';
@@ -191,10 +190,12 @@ const SignUp = () => {
         navigate('/dashboard');
       } else {
         setOtpError(response.error || response.message || 'Invalid OTP. Please try again.');
+        dispatch(showToast({ message: response.error || response.message || 'Invalid OTP. Please try again.', type: 'error' }));
       }
     } catch (error) {
       console.error('OTP verification error:', error);
       setOtpError('Verification failed. Please try again.');
+      dispatch(showToast({ message: 'Verification failed. Please try again.', type: 'error' }));
     } finally {
       setOtpLoading(false);
     }

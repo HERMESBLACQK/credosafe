@@ -19,7 +19,6 @@ import {
 import FloatingFooter from '../components/FloatingFooter';
 import apiService from '../api';
 import { showToast } from '../store/slices/toastSlice';
-import { useError } from '../contexts/ErrorContext';
 import { useLoading } from '../contexts/LoadingContext';
 import useFeeSettings from '../hooks/useFeeSettings';
 
@@ -28,7 +27,6 @@ const Withdraw = () => {
   const { fees, loading: feeLoading, error: feeError, calculateFee } = useFeeSettings();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { startLoading, stopLoading } = useLoading();
   
   const [walletBalance, setWalletBalance] = useState(0);
   const [banks, setBanks] = useState([]);

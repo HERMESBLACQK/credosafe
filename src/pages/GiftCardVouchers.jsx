@@ -102,10 +102,14 @@ const GiftCardVouchers = () => {
           }
         } else {
           console.error('Failed to fetch themes:', themesResponse.message);
+          dispatch(showToast({
+            message: themesResponse.message || 'Failed to fetch themes',
+            type: 'error'
+          }));
         }
       } catch (error) {
-        console.error('❌ Data fetch error:', error);
-        console.error('❌ Error details:', error.message);
+        console.error('\u274c Data fetch error:', error);
+        console.error('\u274c Error details:', error.message);
         dispatch(showToast({
           message: `Failed to fetch data: ${error.message}`,
           type: 'error'

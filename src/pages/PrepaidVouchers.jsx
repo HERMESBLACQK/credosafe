@@ -83,8 +83,8 @@ const PrepaidVouchers = () => {
           }));
         }
       } catch (error) {
-        console.error('❌ Balance fetch error:', error);
-        console.error('❌ Error details:', error.message);
+        console.error('\u274c Balance fetch error:', error);
+        console.error('\u274c Error details:', error.message);
         dispatch(showToast({
           message: `Failed to fetch balance: ${error.message}`,
           type: 'error'

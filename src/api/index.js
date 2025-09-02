@@ -196,7 +196,16 @@ apiClient.interceptors.response.use(
       console.error('Server error:', error.response.data);
     }
 
-    return Promise.reject(error);
+    // Normalize error shapes for frontend
+    const data = error.response?.data || {};
+    let message = data.message || data.error;
+    if (!message && Array.isArray(data.errors) && data.errors.length > 0) {
+      message = data.errors[0]?.msg || data.errors[0]?.message || JSON.stringify(data.errors[0]);
+    }
+    if (!message) {
+      message = error.message || 'Network error: Unable to connect to server';
+    }
+    return Promise.reject(new Error(message));
   }
 );
 
