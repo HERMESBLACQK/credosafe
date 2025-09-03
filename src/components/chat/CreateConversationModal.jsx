@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, AlertCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import apiService from '../../api/index';
 
 const CreateConversationModal = ({ onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
@@ -79,31 +80,14 @@ const CreateConversationModal = ({ onClose, onSubmit }) => {
     try {
       setIsValidatingVoucher(true);
       
-      // Get API base URL dynamically
-      const getApiBaseUrl = () => {
-        if (window.location.hostname.includes('onrender.com') || window.location.protocol === 'https:') {
-          return 'https://server-b6ns.onrender.com/api';
-        }
-        return import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      };
+      const response = await apiService.vouchers.searchByCode(voucherCode);
       
-      const response = await fetch(`${getApiBaseUrl()}/vouchers/validate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ voucherCode })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setVoucherDetails(data.data.voucher);
+      if (response.success) {
+        setVoucherDetails(response.data);
         setErrors(prev => ({ ...prev, voucherCode: '' }));
       } else {
-        const error = await response.json();
         setVoucherDetails(null);
-        setErrors(prev => ({ ...prev, voucherCode: error.message || 'Invalid voucher code' }));
+        setErrors(prev => ({ ...prev, voucherCode: response.error || 'Invalid voucher code' }));
       }
     } catch (error) {
       setVoucherDetails(null);

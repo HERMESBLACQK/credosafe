@@ -1,6 +1,6 @@
 // useFeeSettings.js
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { apiClient } from '../api/index';
 
 /**
  * React hook to fetch and provide fee settings from the backend.
@@ -12,16 +12,24 @@ export default function useFeeSettings() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    setLoading(true);
-    axios.get('/api/fees-settings')
-      .then(res => {
-        setFees(res.data.data || []);
-        setError(null);
-      })
-      .catch(err => {
+    const fetchFees = async () => {
+      setLoading(true);
+      try {
+        const response = await apiClient.get('/fees-settings');
+        if (response.data.success) {
+          setFees(response.data.data || []);
+          setError(null);
+        } else {
+          setError(response.data.message || 'Failed to fetch fees');
+        }
+      } catch (err) {
         setError(err.message || 'Failed to fetch fees');
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFees();
   }, []);
 
   // Get fee object for a given fee_type

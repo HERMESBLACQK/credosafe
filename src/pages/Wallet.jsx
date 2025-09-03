@@ -112,25 +112,16 @@ const Wallet = () => {
     try {
       setIsLoadingRate(true);
       // Use apiService if available, else use fetch with API_BASE_URL
-      let data;
       try {
-        // Try using axios via apiService if available
-        if (apiService.rates && apiService.rates.getUsdToNgnRate) {
-          data = await apiService.rates.getUsdToNgnRate();
+        const response = await apiService.rates.getUsdToNgnRate();
+        console.log('USD/NGN rate server response:', response);
+        if (response.success) {
+          setUsdToNgnRate(response.data.rate);
         } else {
-          // fallback to fetch
-          const response = await fetch('/api/rates/usd-to-ngn');
-          data = await response.json();
+          setUsdToNgnRate(null);
         }
       } catch (err) {
-        // fallback to fetch if axios fails
-        const response = await fetch('/api/rates/usd-to-ngn');
-        data = await response.json();
-      }
-      console.log('USD/NGN rate server response:', data);
-      if (data && data.success) {
-        setUsdToNgnRate(data.rate);
-      } else {
+        console.error('Failed to fetch USD/NGN rate:', err);
         setUsdToNgnRate(null);
       }
     } catch (error) {

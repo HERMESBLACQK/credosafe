@@ -80,10 +80,11 @@ const Withdraw = () => {
       try {
         const response = await apiService.auth.getProfile();
         if (response.success) {
-          setUserData(response.data);
-          setHasRequiredData(response.data.phone && response.data.location);
+          const userData = response.data.user || response.data;
+          setUserData(userData);
+          setHasRequiredData(userData.phone && userData.location);
         } else {
-          dispatch(showToast({ message: response.message || 'Failed to fetch user data.', type: 'error' }));
+          dispatch(showToast({ message: response.error || 'Failed to fetch user data.', type: 'error' }));
         }
       } catch (error) {
         dispatch(showToast({ message: 'An error occurred while fetching user data.', type: 'error' }));
@@ -195,14 +196,15 @@ const Withdraw = () => {
       try {
         const response = await apiService.auth.getProfile();
         if (response.success) {
-          setUserData(response.data.user);
+          const userData = response.data.user || response.data;
+          setUserData(userData);
           setHasRequiredData(
-            response.data.user?.phone && 
-            response.data.user?.location &&
-            response.data.user?.wallet
+            userData?.phone && 
+            userData?.location &&
+            userData?.wallet
           );
         } else {
-          dispatch(showToast({ message: response.message || 'Failed to fetch user data.', type: 'error' }));
+          dispatch(showToast({ message: response.error || 'Failed to fetch user data.', type: 'error' }));
           navigate("/");
         }
       } catch (error) {

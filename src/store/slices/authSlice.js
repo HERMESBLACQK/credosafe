@@ -106,9 +106,10 @@ export const fetchUserProfile = createAsyncThunk(
       
       const response = await apiService.auth.getProfile();
       if (response.success) {
-        return response.data.user; // Return the user object, not the entire data object
+        // Return the user object, handling both response.data.user and response.data formats
+        return response.data.user || response.data;
       } else {
-        return rejectWithValue(response.message || 'Failed to fetch profile');
+        return rejectWithValue(response.error || 'Failed to fetch profile');
       }
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Network error');

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import apiResponseHandler from '../utils/apiResponseHandler';
 
 // Create axios instance for support chat
 const getApiBaseUrl = () => {
@@ -33,149 +34,76 @@ apiClient.interceptors.request.use((config) => {
 const supportChatService = {
   // Get user's conversations
   getConversations: async () => {
-    try {
-      console.log('🔍 [USER SUPPORT CHAT] Getting conversations...');
-      console.log('📤 Request URL: /support-chat/conversations');
-      console.log('📤 Base URL:', API_BASE_URL);
-      
-      const response = await apiClient.get('/support-chat/conversations');
-      
-      console.log('📥 Response Status:', response.status);
-      console.log('📥 Response Data:', JSON.stringify(response.data, null, 2));
-      
-      return response.data;
-    } catch (error) {
-      console.error('❌ [USER SUPPORT CHAT] Error getting conversations:', error);
-      console.error('❌ Error Response:', error.response?.data);
-      console.error('❌ Error Status:', error.response?.status);
-      
-      const serverMessage = error.response?.data?.message;
-      if (serverMessage) {
-        throw new Error(serverMessage);
-      } else {
-        throw new Error('Network error: Unable to connect to server');
+    return await apiResponseHandler.handleApiCall(
+      () => apiClient.get('/support-chat/conversations'),
+      {
+        loadingMessage: 'Loading conversations...',
+        successMessage: 'Conversations loaded successfully',
+        errorMessage: 'Failed to load conversations',
+        showSuccessToast: false,
+        showErrorToast: true
       }
-    }
+    );
   },
 
   // Create new conversation
   createConversation: async (conversationData) => {
-    try {
-      console.log('🔍 [USER SUPPORT CHAT] Creating conversation...');
-      console.log('📤 Request URL: /support-chat/conversations');
-      console.log('📤 Conversation Data:', JSON.stringify(conversationData, null, 2));
-      
-      const response = await apiClient.post('/support-chat/conversations', conversationData);
-      
-      console.log('📥 Response Status:', response.status);
-      console.log('📥 Response Data:', JSON.stringify(response.data, null, 2));
-      
-      return response.data;
-    } catch (error) {
-      console.error('❌ [USER SUPPORT CHAT] Error creating conversation:', error);
-      console.error('❌ Error Response:', error.response?.data);
-      console.error('❌ Error Status:', error.response?.status);
-      
-      const serverMessage = error.response?.data?.message;
-      if (serverMessage) {
-        throw new Error(serverMessage);
-      } else {
-        throw new Error('Network error: Unable to connect to server');
+    return await apiResponseHandler.handleApiCall(
+      () => apiClient.post('/support-chat/conversations', conversationData),
+      {
+        loadingMessage: 'Creating conversation...',
+        successMessage: 'Conversation created successfully!',
+        errorMessage: 'Failed to create conversation'
       }
-    }
+    );
   },
 
   // Get conversation details with messages
   getConversationDetails: async (conversationId) => {
-    try {
-      console.log('🔍 [USER SUPPORT CHAT] Getting conversation details...');
-      console.log('📤 Request URL:', `/support-chat/conversations/${conversationId}`);
-      console.log('📤 Conversation ID:', conversationId);
-      
-      const response = await apiClient.get(`/support-chat/conversations/${conversationId}`);
-      
-      console.log('📥 Response Status:', response.status);
-      console.log('📥 Response Data:', JSON.stringify(response.data, null, 2));
-      
-      return response.data;
-    } catch (error) {
-      console.error('❌ [USER SUPPORT CHAT] Error getting conversation details:', error);
-      console.error('❌ Error Response:', error.response?.data);
-      console.error('❌ Error Status:', error.response?.status);
-      
-      const serverMessage = error.response?.data?.message;
-      if (serverMessage) {
-        throw new Error(serverMessage);
-      } else {
-        throw new Error('Network error: Unable to connect to server');
+    return await apiResponseHandler.handleApiCall(
+      () => apiClient.get(`/support-chat/conversations/${conversationId}`),
+      {
+        loadingMessage: 'Loading conversation details...',
+        successMessage: 'Conversation details loaded successfully',
+        errorMessage: 'Failed to load conversation details',
+        showSuccessToast: false,
+        showErrorToast: true
       }
-    }
+    );
   },
 
   // Send message in conversation
   sendMessage: async (conversationId, message) => {
-    try {
-      console.log('🔍 [USER SUPPORT CHAT] Sending message...');
-      console.log('📤 Request URL:', `/support-chat/conversations/${conversationId}/messages`);
-      console.log('📤 Conversation ID:', conversationId);
-      console.log('📤 Message:', message);
-      
-      const response = await apiClient.post(`/support-chat/conversations/${conversationId}/messages`, {
+    return await apiResponseHandler.handleApiCall(
+      () => apiClient.post(`/support-chat/conversations/${conversationId}/messages`, {
         message
-      });
-      
-      console.log('📥 Response Status:', response.status);
-      console.log('📥 Response Data:', JSON.stringify(response.data, null, 2));
-      
-      return response.data;
-    } catch (error) {
-      console.error('❌ [USER SUPPORT CHAT] Error sending message:', error);
-      console.error('❌ Error Response:', error.response?.data);
-      console.error('❌ Error Status:', error.response?.status);
-      
-      const serverMessage = error.response?.data?.message;
-      if (serverMessage) {
-        throw new Error(serverMessage);
-      } else {
-        throw new Error('Network error: Unable to connect to server');
+      }),
+      {
+        loadingMessage: 'Sending message...',
+        successMessage: 'Message sent successfully!',
+        errorMessage: 'Failed to send message'
       }
-    }
+    );
   },
 
   // Upload file for conversation
   uploadFile: async (conversationId, file) => {
-    try {
-      console.log('🔍 [USER SUPPORT CHAT] Uploading file...');
-      console.log('📤 Request URL: /support-chat/upload');
-      console.log('📤 Conversation ID:', conversationId);
-      console.log('📤 File:', file.name, file.size, file.type);
-      
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('conversationId', conversationId);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('conversationId', conversationId);
 
-      const response = await apiClient.post('/support-chat/upload', formData, {
+    return await apiResponseHandler.handleApiCall(
+      () => apiClient.post('/support-chat/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-      });
-      
-      console.log('📥 Response Status:', response.status);
-      console.log('📥 Response Data:', JSON.stringify(response.data, null, 2));
-      
-      return response.data;
-    } catch (error) {
-      console.error('❌ [USER SUPPORT CHAT] Error uploading file:', error);
-      console.error('❌ Error Response:', error.response?.data);
-      console.error('❌ Error Status:', error.response?.status);
-      
-      const serverMessage = error.response?.data?.message;
-      if (serverMessage) {
-        throw new Error(serverMessage);
-      } else {
-        throw new Error('Network error: Unable to connect to server');
+      }),
+      {
+        loadingMessage: 'Uploading file...',
+        successMessage: 'File uploaded successfully!',
+        errorMessage: 'Failed to upload file'
       }
-    }
+    );
   }
 };
 

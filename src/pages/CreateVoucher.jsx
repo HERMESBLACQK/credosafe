@@ -28,16 +28,17 @@ const CreateVoucher = () => {
       try {
         const response = await apiService.auth.getProfile();
         if (response.success) {
-          // Update to access user data from response.data.user
-          setUserData(response.data.user);
-          // Check for required fields in the nested user object
+          // Access user data from response.data.user or response.data directly
+          const userData = response.data.user || response.data;
+          setUserData(userData);
+          // Check for required fields in the user object
           setHasRequiredData(
-            response.data.user?.phone && 
-            response.data.user?.location &&
-            response.data.user?.wallet
+            userData?.phone && 
+            userData?.location &&
+            userData?.wallet
           );
         } else {
-          dispatch(showToast({ message: response.message || 'Failed to fetch user data.', type: 'error' }));
+          dispatch(showToast({ message: response.error || 'Failed to fetch user data.', type: 'error' }));
           navigate("/"); // Redirect to home if user data cannot be fetched
         }
       } catch (error) {

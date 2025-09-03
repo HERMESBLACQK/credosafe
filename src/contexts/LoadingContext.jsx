@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import Loader from '../components/Loader';
 
 const LoadingContext = createContext();
@@ -15,35 +15,35 @@ export const LoadingProvider = ({ children }) => {
   const [loadingStates, setLoadingStates] = useState({});
   const [globalLoading, setGlobalLoading] = useState(false);
 
-  const startLoading = (key, text = 'Loading...') => {
+  const startLoading = useCallback((key, text = 'Loading...') => {
     setLoadingStates(prev => ({
       ...prev,
       [key]: { isLoading: true, text }
     }));
-  };
+  }, []);
 
-  const stopLoading = (key) => {
+  const stopLoading = useCallback((key) => {
     setLoadingStates(prev => ({
       ...prev,
       [key]: { isLoading: false, text: '' }
     }));
-  };
+  }, []);
 
-  const isLoading = (key) => {
+  const isLoading = useCallback((key) => {
     return loadingStates[key]?.isLoading || false;
-  };
+  }, [loadingStates]);
 
-  const getLoadingText = (key) => {
+  const getLoadingText = useCallback((key) => {
     return loadingStates[key]?.text || 'Loading...';
-  };
+  }, [loadingStates]);
 
-  const startGlobalLoading = (text = 'Loading...') => {
+  const startGlobalLoading = useCallback((text = 'Loading...') => {
     setGlobalLoading(true);
-  };
+  }, []);
 
-  const stopGlobalLoading = () => {
+  const stopGlobalLoading = useCallback(() => {
     setGlobalLoading(false);
-  };
+  }, []);
 
   const value = {
     startLoading,

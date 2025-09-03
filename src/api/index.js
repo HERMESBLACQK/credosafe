@@ -25,6 +25,7 @@ const API_BASE_URL = getApiBaseUrl();
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000, // 30 seconds timeout
+  method: 'GET', // Default method
   headers: {
     'Content-Type': 'application/json',
     // Security headers to prevent caching of sensitive data
@@ -72,6 +73,12 @@ apiClient.interceptors.request.use(
       if (!config.method) {
         config.method = 'get'; // Default to GET
       }
+      
+      // Ensure method is a string and uppercase
+      if (typeof config.method !== 'string') {
+        config.method = 'get';
+      }
+      config.method = config.method.toUpperCase();
 
       // Add auth token if available (but don't cache it)
       const token = secureTokenStorage.getToken();
@@ -372,108 +379,142 @@ const apiService = {
     },
 
     getProfile: async () => {
-      try {
-        const response = await apiClient.get('/auth/profile', {
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get('/auth/profile', {
           cacheKey: 'user_profile',
           cacheTtl: 300000 // 5 minutes
-        });
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch profile');
-      }
+        }),
+        {
+          loadingMessage: 'Loading profile...',
+          successMessage: 'Profile loaded successfully',
+          errorMessage: 'Failed to fetch profile',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     },
 
     logout: async () => {
-      try {
-        const response = await apiClient.post('/auth/logout');
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Logout failed');
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/auth/logout'),
+        {
+          loadingMessage: 'Logging out...',
+          successMessage: 'Logged out successfully',
+          errorMessage: 'Logout failed',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     },
 
     refreshToken: async () => {
-      try {
-        const response = await apiClient.post('/auth/refresh');
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Token refresh failed');
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/auth/refresh'),
+        {
+          loadingMessage: 'Refreshing token...',
+          successMessage: 'Token refreshed successfully',
+          errorMessage: 'Token refresh failed',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     },
 
     getTier: async () => {
-      try {
-        const response = await apiClient.get('/auth/tier', {
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get('/auth/tier', {
           cacheKey: 'user_tier',
           cacheTtl: 600000 // 10 minutes
-        });
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch tier');
-      }
+        }),
+        {
+          loadingMessage: 'Loading tier information...',
+          successMessage: 'Tier information loaded successfully',
+          errorMessage: 'Failed to fetch tier',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     },
 
     getTierLimits: async (tierLevel) => {
-      try {
-        const response = await apiClient.get(`/auth/tier-limits/${tierLevel}`, {
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get(`/auth/tier-limits/${tierLevel}`, {
           cacheKey: `tier_limits_${tierLevel}`,
           cacheTtl: 3600000 // 1 hour
-        });
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch tier limits');
-      }
+        }),
+        {
+          loadingMessage: 'Loading tier limits...',
+          successMessage: 'Tier limits loaded successfully',
+          errorMessage: 'Failed to fetch tier limits',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     },
 
     upgradeTier: async (tierData) => {
-      try {
-        const response = await apiClient.post('/auth/upgrade-tier', tierData);
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to upgrade tier');
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/auth/upgrade-tier', tierData),
+        {
+          loadingMessage: 'Upgrading tier...',
+          successMessage: 'Tier upgraded successfully!',
+          errorMessage: 'Failed to upgrade tier'
+        }
+      );
     },
 
     getDevices: async () => {
-      try {
-        const response = await apiClient.get('/auth/devices', {
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get('/auth/devices', {
           cacheKey: 'user_devices',
           cacheTtl: 300000 // 5 minutes
-        });
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch devices');
-      }
+        }),
+        {
+          loadingMessage: 'Loading devices...',
+          successMessage: 'Devices loaded successfully',
+          errorMessage: 'Failed to fetch devices',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     },
 
     updateProfile: async (profileData) => {
-      try {
-        const response = await apiClient.put('/auth/profile', profileData);
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to update profile');
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.put('/auth/profile', profileData),
+        {
+          loadingMessage: 'Updating profile...',
+          successMessage: 'Profile updated successfully!',
+          errorMessage: 'Failed to update profile'
+        }
+      );
     },
 
     updateSettings: async (settingsData) => {
-      try {
-        const response = await apiClient.put('/auth/settings', settingsData);
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to update settings');
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.put('/auth/settings', settingsData),
+        {
+          loadingMessage: 'Updating settings...',
+          successMessage: 'Settings updated successfully!',
+          errorMessage: 'Failed to update settings'
+        }
+      );
     }
   },
 
   // Public voucher endpoints (no auth)
   publicVouchers: {
     searchByCode: async (voucherCode) => {
-      try {
-        const response = await apiClient.get(`/public-vouchers/${voucherCode}`);
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to search for voucher');
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get(`/public-vouchers/${voucherCode}`),
+        {
+          loadingMessage: 'Searching for voucher...',
+          successMessage: 'Voucher found successfully',
+          errorMessage: 'Failed to search for voucher',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     }
   },
 
@@ -514,15 +555,19 @@ const apiService = {
     },
 
     getById: async (id) => {
-      try {
-        const response = await apiClient.get(`/vouchers/${id}`, {
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get(`/vouchers/${id}`, {
           cacheKey: `voucher_${id}`,
           cacheTtl: 300000 // 5 minutes
-        });
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch voucher');
-      }
+        }),
+        {
+          loadingMessage: 'Loading voucher...',
+          successMessage: 'Voucher loaded successfully',
+          errorMessage: 'Failed to fetch voucher',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     },
 
     create: async (voucherData) => {
@@ -631,124 +676,162 @@ const apiService = {
     },
 
     confirmCancel: async (voucherId) => {
-      try {
-        const response = await apiClient.post(`/vouchers/${voucherId}/confirm-cancel`);
-        // Clear vouchers cache after cancellation
+      const result = await apiResponseHandler.handleApiCall(
+        () => apiClient.post(`/vouchers/${voucherId}/confirm-cancel`),
+        {
+          loadingMessage: 'Confirming cancellation...',
+          successMessage: 'Voucher cancellation confirmed successfully!',
+          errorMessage: 'Failed to confirm cancellation'
+        }
+      );
+      if (result.success) {
         apiService.clearCache();
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to confirm cancellation');
       }
+      return result;
     },
 
     requestRedemptionOTP: async (voucherCode) => {
-      try {
-        const response = await apiClient.post('/vouchers/request-redemption-otp', { voucherCode });
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to request redemption OTP');
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/vouchers/request-redemption-otp', { voucherCode }),
+        {
+          loadingMessage: 'Requesting redemption OTP...',
+          successMessage: 'Redemption OTP sent successfully!',
+          errorMessage: 'Failed to request redemption OTP'
+        }
+      );
     },
 
     verifyRedemptionOTP: async (voucherCode, otp) => {
-      try {
-        const response = await apiClient.post('/vouchers/verify-redemption-otp', { voucherCode, otp });
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to verify redemption OTP');
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/vouchers/verify-redemption-otp', { voucherCode, otp }),
+        {
+          loadingMessage: 'Verifying redemption OTP...',
+          successMessage: 'Redemption OTP verified successfully!',
+          errorMessage: 'Failed to verify redemption OTP'
+        }
+      );
     },
 
     cancel: async (cancelData) => {
-      try {
-        const response = await apiClient.post('/vouchers/cancel', cancelData);
-        // Clear vouchers cache after cancellation
+      const result = await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/vouchers/cancel', cancelData),
+        {
+          loadingMessage: 'Cancelling voucher...',
+          successMessage: 'Voucher cancelled successfully!',
+          errorMessage: 'Failed to cancel voucher'
+        }
+      );
+      if (result.success) {
         apiService.clearCache();
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to cancel voucher');
       }
+      return result;
     },
 
     activate: async (activateData) => {
-      try {
-        const response = await apiClient.post('/vouchers/activate', activateData);
-        // Clear vouchers cache after activation
+      const result = await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/vouchers/activate', activateData),
+        {
+          loadingMessage: 'Activating voucher...',
+          successMessage: 'Voucher activated successfully!',
+          errorMessage: 'Failed to activate voucher'
+        }
+      );
+      if (result.success) {
         apiService.clearCache();
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to activate voucher');
       }
+      return result;
     },
 
     activateVoucher: async (voucherId) => {
-      try {
-        const response = await apiClient.post('/vouchers/activate', { voucherId });
-        // Clear vouchers cache after activation
+      const result = await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/vouchers/activate', { voucherId }),
+        {
+          loadingMessage: 'Activating voucher...',
+          successMessage: 'Voucher activated successfully!',
+          errorMessage: 'Failed to activate voucher'
+        }
+      );
+      if (result.success) {
         apiService.clearCache();
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to activate voucher');
       }
+      return result;
     },
 
     cancelVoucher: async (voucherId, reason) => {
-      try {
-        const response = await apiClient.post('/vouchers/cancel', { voucherId, reason });
-        // Clear vouchers cache after cancellation
+      const result = await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/vouchers/cancel', { voucherId, reason }),
+        {
+          loadingMessage: 'Cancelling voucher...',
+          successMessage: 'Voucher cancelled successfully!',
+          errorMessage: 'Failed to cancel voucher'
+        }
+      );
+      if (result.success) {
         apiService.clearCache();
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to cancel voucher');
       }
+      return result;
     },
 
     releaseMilestone: async (voucherId) => {
-      try {
-        const response = await apiClient.post('/vouchers/release-milestone', { voucherId });
-        // Clear vouchers cache after milestone release
+      const result = await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/vouchers/release-milestone', { voucherId }),
+        {
+          loadingMessage: 'Releasing milestone...',
+          successMessage: 'Milestone released successfully!',
+          errorMessage: 'Failed to release milestone'
+        }
+      );
+      if (result.success) {
         apiService.clearCache();
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to release milestone');
       }
+      return result;
     },
 
     getBalance: async () => {
-      try {
-        const response = await apiClient.get('/vouchers/balance', {
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get('/vouchers/balance', {
           cacheKey: 'user_balance',
           cacheTtl: 60000 // 1 minute
-        });
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch balance');
-      }
+        }),
+        {
+          loadingMessage: 'Loading balance...',
+          successMessage: 'Balance loaded successfully',
+          errorMessage: 'Failed to fetch balance',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     },
 
     searchByCode: async (voucherCode) => {
-      try {
-        const response = await apiClient.get(`/vouchers/search/${voucherCode}`, {
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get(`/vouchers/search/${voucherCode}`, {
           cacheKey: `voucher_search_${voucherCode}`,
           cacheTtl: 300000 // 5 minutes
-        });
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to search voucher');
-      }
+        }),
+        {
+          loadingMessage: 'Searching for voucher...',
+          successMessage: 'Voucher found successfully',
+          errorMessage: 'Failed to search voucher',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     },
 
     uploadVoucher: async (formData) => {
-      try {
-        const response = await apiClient.post('/vouchers/upload', formData, {
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/vouchers/upload', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
-        });
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to upload voucher');
-      }
+        }),
+        {
+          loadingMessage: 'Uploading voucher...',
+          successMessage: 'Voucher uploaded successfully!',
+          errorMessage: 'Failed to upload voucher'
+        }
+      );
     }
   },
 
@@ -822,64 +905,90 @@ const apiService = {
 
     // Get wallet transactions
     getWalletTransactions: async (page = 1, limit = 10) => {
-      try {
-        const response = await apiClient.get(`/payments/wallet-transactions?page=${page}&limit=${limit}`, {
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get(`/payments/wallet-transactions?page=${page}&limit=${limit}`, {
           cacheKey: `wallet_transactions_${page}`,
           cacheTtl: 120000 // 2 minutes
-        });
-        console.log('📊 Wallet transactions response:', {
-          success: response.success,
-          data: response.data,
-          pagination: response.data?.pagination
-        });
-        return response.data;
-      } catch (error) {
-        console.error('❌ Error fetching wallet transactions:', error);
-        throw new Error(error.response?.data?.message || 'Failed to fetch wallet transactions');
-      }
+        }),
+        {
+          loadingMessage: 'Loading wallet transactions...',
+          successMessage: 'Wallet transactions loaded successfully',
+          errorMessage: 'Failed to fetch wallet transactions',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     },
 
     // Get list of banks
     getBanks: async () => {
-      try {
-        const response = await apiClient.get('/payments/banks');
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch banks');
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get('/payments/banks'),
+        {
+          loadingMessage: 'Loading banks...',
+          successMessage: 'Banks loaded successfully',
+          errorMessage: 'Failed to fetch banks',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     },
 
     // Verify bank account
     verifyBankAccount: async (accountData) => {
-      try {
-        const response = await apiClient.post('/payments/verify-account', accountData);
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to verify bank account');
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/payments/verify-account', accountData),
+        {
+          loadingMessage: 'Verifying bank account...',
+          successMessage: 'Bank account verified successfully!',
+          errorMessage: 'Failed to verify bank account'
+        }
+      );
     },
 
     // Initiate withdrawal
     withdraw: async (withdrawalData) => {
-      try {
-        const response = await apiClient.post('/payments/withdraw', withdrawalData);
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to initiate withdrawal');
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/payments/withdraw', withdrawalData),
+        {
+          loadingMessage: 'Initiating withdrawal...',
+          successMessage: 'Withdrawal request submitted successfully!',
+          errorMessage: 'Failed to initiate withdrawal'
+        }
+      );
     },
 
     // Get withdrawal transactions
     getWithdrawals: async (page = 1, limit = 10) => {
-      try {
-        const response = await apiClient.get(`/payments/withdrawals?page=${page}&limit=${limit}`, {
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get(`/payments/withdrawals?page=${page}&limit=${limit}`, {
           cacheKey: `withdrawals_${page}`,
           cacheTtl: 120000 // 2 minutes
-        });
-        return response.data;
-      } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch withdrawals');
-      }
+        }),
+        {
+          loadingMessage: 'Loading withdrawals...',
+          successMessage: 'Withdrawals loaded successfully',
+          errorMessage: 'Failed to fetch withdrawals',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
+    }
+  },
+
+  // Rates endpoints
+  rates: {
+    getUsdToNgnRate: async () => {
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get('/rates/usd-to-ngn'),
+        {
+          loadingMessage: 'Loading exchange rate...',
+          successMessage: 'Exchange rate loaded successfully',
+          errorMessage: 'Failed to load exchange rate',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     }
   }
 };
@@ -887,19 +996,75 @@ const apiService = {
 // Referral API methods
 export const referralAPI = {
   // Get user's referral statistics
-  getStats: () => apiClient.get('/referrals/stats'),
+  getStats: async () => {
+    return await apiResponseHandler.handleApiCall(
+      () => apiClient.get('/referrals/stats'),
+      {
+        loadingMessage: 'Loading referral statistics...',
+        successMessage: 'Referral statistics loaded successfully',
+        errorMessage: 'Failed to load referral statistics',
+        showSuccessToast: false,
+        showErrorToast: true
+      }
+    );
+  },
   
   // Validate referral code
-  validateCode: (referralCode) => apiClient.post('/referrals/validate', { referralCode }),
+  validateCode: async (referralCode) => {
+    return await apiResponseHandler.handleApiCall(
+      () => apiClient.post('/referrals/validate', { referralCode }),
+      {
+        loadingMessage: 'Validating referral code...',
+        successMessage: 'Referral code validated successfully',
+        errorMessage: 'Failed to validate referral code',
+        showSuccessToast: false,
+        showErrorToast: true
+      }
+    );
+  },
   
   // Get referral settings
-  getSettings: () => apiClient.get('/referrals/settings'),
+  getSettings: async () => {
+    return await apiResponseHandler.handleApiCall(
+      () => apiClient.get('/referrals/settings'),
+      {
+        loadingMessage: 'Loading referral settings...',
+        successMessage: 'Referral settings loaded successfully',
+        errorMessage: 'Failed to load referral settings',
+        showSuccessToast: false,
+        showErrorToast: true
+      }
+    );
+  },
   
   // Get user's referral earnings
-  getEarnings: (page = 1, limit = 20) => apiClient.get(`/referrals/earnings?page=${page}&limit=${limit}`),
+  getEarnings: async (page = 1, limit = 20) => {
+    return await apiResponseHandler.handleApiCall(
+      () => apiClient.get(`/referrals/earnings?page=${page}&limit=${limit}`),
+      {
+        loadingMessage: 'Loading referral earnings...',
+        successMessage: 'Referral earnings loaded successfully',
+        errorMessage: 'Failed to load referral earnings',
+        showSuccessToast: false,
+        showErrorToast: true
+      }
+    );
+  },
   
   // Get referred users
-  getReferredUsers: (page = 1, limit = 20) => apiClient.get(`/referrals/referred-users?page=${page}&limit=${limit}`)
+  getReferredUsers: async (page = 1, limit = 20) => {
+    return await apiResponseHandler.handleApiCall(
+      () => apiClient.get(`/referrals/referred-users?page=${page}&limit=${limit}`),
+      {
+        loadingMessage: 'Loading referred users...',
+        successMessage: 'Referred users loaded successfully',
+        errorMessage: 'Failed to load referred users',
+        showSuccessToast: false,
+        showErrorToast: true
+      }
+    );
+  }
 };
 
+export { apiClient };
 export default apiService; 
