@@ -12,11 +12,11 @@ import {
   LogIn
 } from 'lucide-react';
 import { storeLoginData } from '../store/slices/authSlice';
-import { showToast } from '../store/slices/uiSlice';
 import { useError } from '../contexts/ErrorContext';
 import apiService from '../api/index';
 import { useLoading } from '../contexts/LoadingContext';
-import OTPModal from '../components/OTPModal'; // Added import for OTPModal
+import OTPModal from '../components/OTPModal';
+import { showSuccess, showError, showWarning, showInfo, handleApiError } from '../utils/toast';
 
 const SignIn = () => {
   const dispatch = useDispatch();
@@ -90,7 +90,7 @@ const SignIn = () => {
     else if (userAgent.includes('iOS')) os = 'iOS';
     
     // Generate device name
-    const deviceName = `${os} ${deviceType.charAt(0).toUpperCase() + deviceType.slice(1)}`;
+    const deviceName = `${os} ${deviceType ? deviceType.charAt(0).toUpperCase() + deviceType.slice(1) : 'Device'}`;
     
     const deviceInfo = {
       deviceName,
@@ -170,26 +170,31 @@ const SignIn = () => {
         deviceInfo
       };
 
-      const response = await apiService.auth.login(loginPayload);
+      const result = await apiService.auth.login(loginPayload);
+      console.log('🔍 Raw result from apiService.auth.login:', result);
 
       // Handle success shape
-      if (response?.success) {
-        const data = response.data || response;
+      if (result?.success) {
+        const data = result.data || result;
+        console.log('✅ Login successful, processing data:', data);
+        
         if (data?.requiresOTP) {
           // 2FA OTP flow
           setLoginData(data);
           setShowOTPModal(true);
-          dispatch(showToast({ message: data.message || 'Please check your email for the verification code', type: 'info' }));
+          showInfo(data.message || 'Please check your email for the verification code');
         } else if (data?.emailNotVerified || data?.requiresEmailVerification) {
           // Email not verified flow
           setEmailForVerification(formData.email);
           setShowEmailVerificationModal(true);
-          dispatch(showToast({ message: data.message || 'Please verify your email address before signing in', type: 'warning' }));
+          showWarning(data.message || 'Please verify your email address before signing in');
         } else {
+          console.log('🚀 Proceeding to complete login with data:', data);
           await completeLogin(data);
         }
       } else {
-        dispatch(showToast({ message: response?.message || 'Login failed. Please try again.', type: 'error' }));
+        console.error('Login failed:', result?.error);
+        showError(result?.error || 'Login failed. Please try again.');
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -198,10 +203,9 @@ const SignIn = () => {
       if (serverData?.requiresOTP || serverData?.requiresEmailVerification) {
         setEmailForVerification(formData.email);
         setShowEmailVerificationModal(true);
-        dispatch(showToast({ message: serverData.message || 'Email not verified. A verification code has been sent to your email.', type: 'warning' }));
+        showWarning(serverData.message || 'Email not verified. A verification code has been sent to your email.');
       } else {
-        const msg = serverData?.message || error?.message || 'Login failed. Please try again.';
-        dispatch(showToast({ message: msg, type: 'error' }));
+        handleApiError(error, 'Login failed. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
@@ -213,35 +217,26 @@ const SignIn = () => {
     e.preventDefault();
     
     if (!otp.trim()) {
-      dispatch(showToast({ 
-        message: 'Please enter the verification code', 
-        type: 'error' 
-      }));
+      showError('Please enter the verification code');
       return;
     }
 
     try {
       startLoading('otp', 'Verifying code...');
       
-      const response = await apiService.auth.verifyLoginOTP({
+      const result = await apiService.auth.verifyLoginOTP({
         email: formData.email,
         otp: otp.trim()
       });
       
-      if (response.success) {
-        await completeLogin(response.data);
+      if (result.success) {
+        await completeLogin(result.data);
       } else {
-        dispatch(showToast({ 
-          message: response.error || response.message || 'Invalid verification code', 
-          type: 'error' 
-        }));
+        console.error('OTP verification failed:', result?.error);
       }
     } catch (error) {
       console.error('OTP verification error:', error);
-      dispatch(showToast({ 
-        message: 'Verification failed. Please try again.', 
-        type: 'error' 
-      }));
+      handleApiError(error, 'Verification failed. Please try again.');
     } finally {
       stopLoading('otp');
     }
@@ -258,24 +253,15 @@ const SignIn = () => {
       
       if (response.success) {
         setShowEmailVerificationModal(false);
-        dispatch(showToast({ 
-          message: 'Email verified successfully! You can now sign in.', 
-          type: 'success' 
-        }));
+        showSuccess('Email verified successfully! You can now sign in.');
         // Clear the form and let user try login again
         setFormData({ email: '', password: '' });
       } else {
-        dispatch(showToast({ 
-          message: response.error || response.message || 'Invalid verification code', 
-          type: 'error' 
-        }));
+        showError(response.error || response.message || 'Invalid verification code');
       }
     } catch (error) {
       console.error('Email verification error:', error);
-      dispatch(showToast({ 
-        message: 'Email verification failed. Please try again.', 
-        type: 'error' 
-      }));
+      handleApiError(error, 'Email verification failed. Please try again.');
     } finally {
       stopLoading('email-verification');
     }
@@ -286,47 +272,42 @@ const SignIn = () => {
       const response = await apiService.auth.resendOTP(email);
       
       if (response.success) {
-        dispatch(showToast({ 
-          message: 'New verification code sent to your email!', 
-          type: 'success' 
-        }));
+        showSuccess('New verification code sent to your email!');
       } else {
-        dispatch(showToast({ 
-          message: response.error || 'Failed to resend verification code.', 
-          type: 'error' 
-        }));
+        showError(response.error || 'Failed to resend verification code.');
       }
     } catch (error) {
       console.error('Email verification resend error:', error);
-      dispatch(showToast({ 
-        message: 'Failed to resend verification code. Please try again.', 
-        type: 'error' 
-      }));
+      handleApiError(error, 'Failed to resend verification code. Please try again.');
     }
   };
 
   const completeLogin = async (data) => {
-    const token = data?.token;
-    const user = data?.user;
-    
-    if (token) {
-      apiService.setAuthToken(token);
-      console.log('✅ Login token stored successfully');
-    } else {
-      console.log('❌ No token received from login');
+    try {
+      console.log('🔄 Starting completeLogin with data:', data);
+      const token = data?.token;
+      const user = data?.user;
+      
+      if (token) {
+        apiService.setAuthToken(token);
+        console.log('✅ Login token stored successfully');
+      } else {
+        console.log('❌ No token received from login');
+      }
+      
+      // Dispatch store login data action
+      dispatch(storeLoginData({ 
+        user: user,
+        token: token
+      }));
+      
+      showSuccess('Welcome back to CredoSafe!');
+      console.log('🚀 Navigating to dashboard...');
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('❌ Error in completeLogin:', error);
+      showError('Login completed but navigation failed. Please refresh the page.');
     }
-    
-    // Dispatch store login data action
-    dispatch(storeLoginData({ 
-      user: user,
-      token: token
-    }));
-    
-    dispatch(showToast({ 
-      message: 'Welcome back to CredoSafe!', 
-      type: 'success' 
-    }));
-    navigate('/dashboard');
   };
 
   return (

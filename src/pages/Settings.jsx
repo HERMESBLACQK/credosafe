@@ -79,7 +79,7 @@ const Settings = () => {
         });
         
         dispatch(showToast({
-          message: `${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} ${newValue ? 'enabled' : 'disabled'}`,
+          message: `${key ? key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()) : 'Setting'} ${newValue ? 'enabled' : 'disabled'}`,
           type: 'success'
         }));
       } else {
@@ -130,7 +130,7 @@ const Settings = () => {
         });
         
         dispatch(showToast({
-          message: `${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} ${newValue ? 'enabled' : 'disabled'}`,
+          message: `${key ? key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()) : 'Setting'} ${newValue ? 'enabled' : 'disabled'}`,
           type: 'success'
         }));
       } else {

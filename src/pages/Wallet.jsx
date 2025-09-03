@@ -26,8 +26,8 @@ import {
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
 import apiService from '../api';
-import { showToast } from '../store/slices/toastSlice';
 import { useError } from '../contexts/ErrorContext';
+import { showSuccess, showError, showWarning, showInfo, handleApiError } from '../utils/toast';
 import { useLoading } from '../contexts/LoadingContext';
 import useFeeSettings from '../hooks/useFeeSettings';
 
@@ -66,13 +66,13 @@ const Wallet = () => {
   const fetchWalletBalance = async () => {
     try {
       setIsLoadingBalance(true);
-      const response = await apiService.payments.getWalletBalance();
-      if (response.success) {
-        setWalletBalance(response.data.balance);
+      const result = await apiService.payments.getWalletBalance();
+      if (result.success) {
+        setWalletBalance(result.data.balance);
       }
     } catch (error) {
       console.error('Error fetching wallet balance:', error);
-      dispatch(showToast({ type: 'error', message: 'Failed to fetch wallet balance' }));
+      showError('Failed to fetch wallet balance');
     } finally {
       setIsLoadingBalance(false);
     }
@@ -97,17 +97,11 @@ const Wallet = () => {
         setRecentTransactions(response.data.transactions || []);
       } else {
         console.warn('⚠️ Failed to fetch transactions:', response.message);
-        dispatch(showToast({ 
-          type: 'error', 
-          message: response.message || 'Failed to fetch transactions' 
-        }));
+        showError(response.message || 'Failed to fetch transactions');
       }
     } catch (error) {
       console.error('❌ Error fetching transactions:', error);
-      dispatch(showToast({ 
-        type: 'error', 
-        message: error.response?.data?.message || 'Failed to fetch transactions' 
-      }));
+      handleApiError(error, 'Failed to fetch transactions');
     } finally {
       setIsLoadingTransactions(false);
     }
@@ -171,18 +165,12 @@ const Wallet = () => {
     const message = params.get('message');
 
     if (status === 'success') {
-      dispatch(showToast({ 
-        type: 'success', 
-        message: `Payment successful! Your wallet has been credited with ₦${amount}` 
-      }));
+      showSuccess(`Payment successful! Your wallet has been credited with ₦${amount}`);
       // Refresh balance and transactions
       fetchWalletBalance();
       fetchRecentTransactions();
     } else if (status === 'error') {
-      dispatch(showToast({ 
-        type: 'error', 
-        message: message || 'Payment failed. Please try again.' 
-      }));
+      showError(message || 'Payment failed. Please try again.');
     }
   }, [location.search, dispatch]);
 
@@ -254,11 +242,11 @@ const Wallet = () => {
   const handleFundSubmit = async (e) => {
     e.preventDefault();
     if (!fundAmount || parseFloat(fundAmount) < 1) {
-      dispatch(showToast({ type: 'error', message: `Amount must be at least ${currency === 'NGN' ? '₦100' : '$1'}` }));
+      showError(`Amount must be at least ${currency === 'NGN' ? '₦100' : '$1'}`);
       return;
     }
     if (!phone) {
-      dispatch(showToast({ type: 'error', message: 'Please enter your phone number' }));
+      showError('Please enter your phone number');
       return;
     }
 
@@ -273,11 +261,11 @@ const Wallet = () => {
       if (response.success) {
         window.location.href = response.data.checkoutUrl;
       } else {
-        dispatch(showToast({ type: 'error', message: response.message }));
+        showError(response.message);
       }
     } catch (error) {
       console.error('Error funding wallet:', error);
-      dispatch(showToast({ type: 'error', message: 'Failed to initialize payment' }));
+      handleApiError(error, 'Failed to initialize payment');
     } finally {
       stopGlobalLoading();
     }
@@ -406,7 +394,7 @@ const Wallet = () => {
                                     setCopiedRef(transaction.id);
                                     setTimeout(() => setCopiedRef(null), 1200);
                                   } catch (e) {
-                                    dispatch(showToast({ type: 'error', message: 'Failed to copy reference' }));
+                                    showError('Failed to copy reference');
                                   }
                                 }}
                                 className="inline-flex items-center text-neutral-500 hover:text-neutral-700"

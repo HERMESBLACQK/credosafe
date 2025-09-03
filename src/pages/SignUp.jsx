@@ -11,10 +11,10 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { loginUser } from '../store/slices/authSlice';
-import { showToast } from '../store/slices/uiSlice';
 import apiService from '../api/index';
 import OTPModal from '../components/OTPModal';
 import { useLoading } from '../contexts/LoadingContext';
+import { showSuccess, showError, handleApiError } from '../utils/toast';
 
 const SignUp = () => {
   const dispatch = useDispatch();
@@ -110,14 +110,14 @@ const SignUp = () => {
       };
 
       // Call registration API
-      const response = await apiService.auth.register(payload);
+      const result = await apiService.auth.register(payload);
       
-      if (response?.success) {
-        console.log('📝 Registration response:', response);
-        console.log('🎫 Token from registration:', response.data?.token);
+      if (result?.success) {
+        console.log('📝 Registration response:', result);
+        console.log('🎫 Token from registration:', result.data?.token);
         
         // Store the temporary token from registration
-        const token = response.data?.token;
+        const token = result.data?.token;
         if (token) {
           apiService.setAuthToken(token);
           console.log('✅ Temporary token stored after registration');
@@ -130,21 +130,12 @@ const SignUp = () => {
         setOtpError(null);
         
         console.log('🔐 OTP Modal State:', { showOTPModal: true, email: formData.email });
-        
-        dispatch(showToast({ 
-          message: 'Registration successful! Please verify your email with the OTP sent to your inbox.', 
-          type: 'success' 
-        }));
       } else {
-        dispatch(showToast({ 
-          message: response?.message || 'Registration failed. Please try again.', 
-          type: 'error' 
-        }));
+        console.error('Registration failed:', result?.error);
       }
     } catch (error) {
       console.error('Registration error:', error);
-      const msg = error?.response?.data?.message || error?.message || 'Registration failed. Please try again.';
-      dispatch(showToast({ message: msg, type: 'error' }));
+      handleApiError(error, 'Registration failed. Please try again.');
     } finally {
       setIsSubmitting(false);
       stopLoading('signup');
@@ -157,17 +148,17 @@ const SignUp = () => {
     setOtpError(null);
 
     try {
-      const response = await apiService.auth.verifyOTP({
+      const result = await apiService.auth.verifyOTP({
         email: formData.email,
         otp: otp
       });
 
-      if (response.success) {
-        console.log('📝 OTP verification response:', response);
-        console.log('🎫 Token from OTP verification:', response.data?.token);
+      if (result.success) {
+        console.log('📝 OTP verification response:', result);
+        console.log('🎫 Token from OTP verification:', result.data?.token);
         
         // Store the final token after email verification
-        const token = response.data?.token;
+        const token = result.data?.token;
         if (token) {
           apiService.setAuthToken(token);
           console.log('✅ Final token stored after email verification');
@@ -177,25 +168,22 @@ const SignUp = () => {
         
         // Auto-login the user
         dispatch(loginUser({ 
-          user: response.data?.user,
+          user: result.data?.user,
           token: token
         }));
         
-        dispatch(showToast({ 
-          message: 'Email verified successfully! Welcome to CredoSafe.', 
-          type: 'success' 
-        }));
+        showSuccess('Email verified successfully! Welcome to CredoSafe.');
         
         setShowOTPModal(false);
         navigate('/dashboard');
       } else {
-        setOtpError(response.error || response.message || 'Invalid OTP. Please try again.');
-        dispatch(showToast({ message: response.error || response.message || 'Invalid OTP. Please try again.', type: 'error' }));
+        setOtpError(result.error || result.message || 'Invalid OTP. Please try again.');
+        showError(result.error || result.message || 'Invalid OTP. Please try again.');
       }
     } catch (error) {
       console.error('OTP verification error:', error);
       setOtpError('Verification failed. Please try again.');
-      dispatch(showToast({ message: 'Verification failed. Please try again.', type: 'error' }));
+      handleApiError(error, 'Verification failed. Please try again.');
     } finally {
       setOtpLoading(false);
     }
@@ -207,22 +195,13 @@ const SignUp = () => {
       const response = await apiService.auth.resendOTP(email);
       
       if (response.success) {
-        dispatch(showToast({ 
-          message: 'New OTP sent to your email!', 
-          type: 'success' 
-        }));
+        showSuccess('New OTP sent to your email!');
       } else {
-        dispatch(showToast({ 
-          message: response.error || 'Failed to resend OTP.', 
-          type: 'error' 
-        }));
+        showError(response.error || 'Failed to resend OTP.');
       }
     } catch (error) {
       console.error('OTP resend error:', error);
-      dispatch(showToast({ 
-        message: 'Failed to resend OTP. Please try again.', 
-        type: 'error' 
-      }));
+      handleApiError(error, 'Failed to resend OTP. Please try again.');
     }
   };
 

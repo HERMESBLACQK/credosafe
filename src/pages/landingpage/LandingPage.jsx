@@ -1,6 +1,4 @@
-// eslint-disable-next-line no-unused-vars
-import { motion } from 'framer-motion';
-import { useDispatch, useSelector } from 'react-redux';
+// import { motion } from 'framer-motion'; // Temporarily disabled for landing page
 import { useNavigate } from 'react-router-dom';
 import React, { useState } from 'react';
 import { 
@@ -16,31 +14,15 @@ import {
   Globe,
   LogIn,
   UserPlus,
-  LogOut,
   Menu,
   X
 } from 'lucide-react';
-import { logoutUser } from '../../store/slices/authSlice';
-import { showToast } from '../../store/slices/uiSlice';
 
 const LandingPage = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const dispatch = useDispatch();
   const navigate = useNavigate();
   
-  const fadeInUp = {
-    initial: { opacity: 0, y: 60 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.6 }
-  };
-
-  const staggerContainer = {
-    animate: {
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
+  // Animation variants removed for cleaner code
 
   const voucherTypes = [
     {
@@ -106,14 +88,10 @@ const LandingPage = () => {
       <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-2"
-            >
+            <div className="flex items-center space-x-2">
               <Shield className="w-8 h-8 text-blue-600" />
               <span className="text-xl font-bold text-gray-900">CredoSafe</span>
-            </motion.div>
+            </div>
             <div className="flex items-center">
               {/* Desktop Menu */}
               <div className="hidden md:flex items-center space-x-4">
@@ -169,34 +147,17 @@ const LandingPage = () => {
       <section className="relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center">
-            <motion.h1 
-              variants={fadeInUp}
-              initial="initial"
-              animate="animate"
-              className="text-5xl md:text-7xl font-bold text-gray-900 mb-6"
-            >
+            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6">
               Secure Voucher
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
                 {" "}Platform
               </span>
-            </motion.h1>
-            <motion.p 
-              variants={fadeInUp}
-              initial="initial"
-              animate="animate"
-              transition={{ delay: 0.2 }}
-              className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto"
-            >
+            </h1>
+            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
               Create, manage, and redeem secure vouchers for work orders, purchases, prepaid services, and gift cards. 
               Trust in our escrow protection and instant processing.
-            </motion.p>
-            <motion.div 
-              variants={fadeInUp}
-              initial="initial"
-              animate="animate"
-              transition={{ delay: 0.4 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center"
-            >
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button 
                 onClick={() => navigate('/landingpage/redeem-public')}
                 className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition-all transform hover:scale-105 flex items-center justify-center space-x-2"
@@ -207,7 +168,7 @@ const LandingPage = () => {
               <button className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg hover:border-blue-600 hover:text-blue-600 transition-all">
                 Learn More
               </button>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>
@@ -215,38 +176,32 @@ const LandingPage = () => {
       {/* Features Section */}
       <section id="features" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
+          <div 
+
             className="text-center mb-16"
           >
-            <motion.h2 
-              variants={fadeInUp}
+            <h2 
+
               className="text-4xl font-bold text-gray-900 mb-4"
             >
               Why Choose CredoSafe?
-            </motion.h2>
-            <motion.p 
-              variants={fadeInUp}
+            </h2>
+            <p 
+
               className="text-xl text-gray-600 max-w-2xl mx-auto"
             >
               Built with security, speed, and simplicity in mind
-            </motion.p>
-          </motion.div>
+            </p>
+          </div>
           
-          <motion.div 
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
+          <div 
+
             className="grid md:grid-cols-2 lg:grid-cols-4 gap-8"
           >
             {features.map((feature, index) => (
-              <motion.div
+              <div
                 key={index}
-                variants={fadeInUp}
+
                 className="text-center p-6 rounded-xl bg-gray-50 hover:bg-white hover:shadow-lg transition-all"
               >
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
@@ -256,47 +211,41 @@ const LandingPage = () => {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h3>
                 <p className="text-gray-600">{feature.description}</p>
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* Voucher Types Section */}
       <section id="vouchers" className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
+          <div 
+
             className="text-center mb-16"
           >
-            <motion.h2 
-              variants={fadeInUp}
+            <h2 
+
               className="text-4xl font-bold text-gray-900 mb-4"
             >
               Voucher Types
-            </motion.h2>
-            <motion.p 
-              variants={fadeInUp}
+            </h2>
+            <p 
+
               className="text-xl text-gray-600 max-w-2xl mx-auto"
             >
               Choose the perfect voucher type for your needs
-            </motion.p>
-          </motion.div>
+            </p>
+          </div>
 
-          <motion.div 
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
+          <div 
+
             className="grid md:grid-cols-2 gap-8"
           >
             {voucherTypes.map((voucher, index) => (
-              <motion.div 
+              <div 
                 key={index}
-                variants={fadeInUp}
+
                 onClick={() => navigate(voucher.path)}
                 className={`bg-white p-8 rounded-2xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300 cursor-pointer`}
               >
@@ -320,51 +269,42 @@ const LandingPage = () => {
                     const route = voucher.title.toLowerCase().replace(/\s+/g, '-').replace('vouchers', 'vouchers');
                     navigate(`/landingpage/${route}`);
                   }}
-                  className={`mt-6 bg-gradient-to-r ${voucher.color} text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity flex items-center space-x-2 inline-block`}
+                  className={`mt-6 bg-gradient-to-r ${voucher.color} text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity inline-flex items-center space-x-2`}
                 >
                   <span>Learn More</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <motion.h2 
-            variants={fadeInUp}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
+          <h2 
+            
             className="text-4xl font-bold text-white mb-4"
           >
             Ready to Get Started?
-          </motion.h2>
-          <motion.p 
-            variants={fadeInUp}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
+          </h2>
+          <p 
+            
+            
             className="text-xl text-blue-100 mb-8"
           >
             Join thousands of users who trust CredoSafe for their secure voucher needs
-          </motion.p>
-          <motion.button 
-            variants={fadeInUp}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-            transition={{ delay: 0.4 }}
+          </p>
+          <button 
+            
+            
             onClick={() => navigate('/signin')}
             className="bg-white text-blue-600 px-8 py-4 rounded-lg hover:bg-gray-100 transition-colors font-semibold flex items-center space-x-2 mx-auto"
           >
             <span>Get Started Today</span>
             <ArrowRight className="w-5 h-5" />
-          </motion.button>
+          </button>
         </div>
       </section>
 

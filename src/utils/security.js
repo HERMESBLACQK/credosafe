@@ -17,7 +17,10 @@ export const SENSITIVE_ENDPOINTS = [
 
 // Check if an endpoint is sensitive
 export const isSensitiveEndpoint = (url) => {
-  return SENSITIVE_ENDPOINTS.some(endpoint => url?.includes(endpoint));
+  if (!url || typeof url !== 'string') {
+    return false;
+  }
+  return SENSITIVE_ENDPOINTS.some(endpoint => url.includes(endpoint));
 };
 
 // Get security headers for sensitive requests

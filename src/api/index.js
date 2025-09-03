@@ -7,6 +7,7 @@ import {
   secureTokenStorage, 
   sanitizeForLogging 
 } from '../utils/security';
+import apiResponseHandler from '../utils/apiResponseHandler';
 
 // Dynamic API Configuration
 const getApiBaseUrl = () => {
@@ -49,62 +50,93 @@ const apiClient = axios.create({
 // Request interceptor for authentication and security
 apiClient.interceptors.request.use(
   (config) => {
-    // Ensure headers object exists
-    if (!config.headers) {
-      config.headers = {};
-    }
+    try {
+      // Ensure config is valid
+      if (!config || typeof config !== 'object') {
+        console.warn('⚠️ Invalid request config:', config);
+        return config;
+      }
 
-    // Add auth token if available (but don't cache it)
-    const token = secureTokenStorage.getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      // Add additional security for token requests
-      config.headers['X-Requested-With'] = 'XMLHttpRequest';
-    }
+      // Ensure headers object exists
+      if (!config.headers) {
+        config.headers = {};
+      }
 
-    // Add device info for enhanced tracking (only if not already set)
-    if (!config.headers['X-Device-Info']) {
-      config.headers['X-Device-Info'] = JSON.stringify({
-        userAgent: navigator.userAgent,
-        screenResolution: `${screen.width}x${screen.height}`,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        language: navigator.language,
-        platform: navigator.platform
-      });
-    }
+      // Ensure URL is properly set
+      if (!config.url) {
+        console.warn('⚠️ Request config missing URL:', config);
+        return config;
+      }
 
-    // Force no-cache for sensitive endpoints
-    const isSensitive = isSensitiveEndpoint(config.url);
+      // Ensure method is properly set
+      if (!config.method) {
+        config.method = 'get'; // Default to GET
+      }
 
-    if (isSensitive) {
-      // Add security headers for sensitive endpoints
-      Object.assign(config.headers, getSecurityHeaders());
-      // Don't cache sensitive requests
-      config.cacheKey = null;
-    }
+      // Add auth token if available (but don't cache it)
+      const token = secureTokenStorage.getToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        // Add additional security for token requests
+        config.headers['X-Requested-With'] = 'XMLHttpRequest';
+      }
 
-    // Add cache control for non-sensitive GET requests only
-    if (config.method === 'get' && config.cacheKey && !isSensitive) {
-      const cachedData = sessionStorage.getItem(`cache_${config.cacheKey}`);
-      if (cachedData) {
-        const { data, timestamp, ttl } = JSON.parse(cachedData);
-        if (Date.now() - timestamp < ttl) {
-          // Return cached data
-          return Promise.resolve({
-            data: data,
-            status: 200,
-            statusText: 'OK',
-            headers: {},
-            config: config,
-            request: {}
+      // Add device info for enhanced tracking (only if not already set)
+      if (!config.headers['X-Device-Info']) {
+        try {
+          config.headers['X-Device-Info'] = JSON.stringify({
+            userAgent: navigator.userAgent,
+            screenResolution: `${screen.width}x${screen.height}`,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            language: navigator.language,
+            platform: navigator.platform
           });
+        } catch (error) {
+          console.warn('⚠️ Failed to add device info:', error);
         }
       }
-    }
 
-    return config;
+      // Force no-cache for sensitive endpoints
+      const isSensitive = isSensitiveEndpoint(config.url);
+
+      if (isSensitive) {
+        // Add security headers for sensitive endpoints
+        try {
+          Object.assign(config.headers, getSecurityHeaders());
+        } catch (error) {
+          console.warn('⚠️ Failed to add security headers:', error);
+        }
+        // Don't cache sensitive requests
+        config.cacheKey = null;
+      }
+
+      // Add cache control for non-sensitive GET requests only
+      if (config.method && config.method.toLowerCase() === 'get' && config.cacheKey && !isSensitive) {
+        const cachedData = sessionStorage.getItem(`cache_${config.cacheKey}`);
+        if (cachedData) {
+          const { data, timestamp, ttl } = JSON.parse(cachedData);
+          if (Date.now() - timestamp < ttl) {
+            // Return cached data
+            return Promise.resolve({
+              data: data,
+              status: 200,
+              statusText: 'OK',
+              headers: {},
+              config: config,
+              request: {}
+            });
+          }
+        }
+      }
+
+      return config;
+    } catch (error) {
+      console.error('❌ Request interceptor error:', error);
+      return config; // Return original config if interceptor fails
+    }
   },
   (error) => {
+    console.error('❌ Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -196,16 +228,7 @@ apiClient.interceptors.response.use(
       console.error('Server error:', error.response.data);
     }
 
-    // Normalize error shapes for frontend
-    const data = error.response?.data || {};
-    let message = data.message || data.error;
-    if (!message && Array.isArray(data.errors) && data.errors.length > 0) {
-      message = data.errors[0]?.msg || data.errors[0]?.message || JSON.stringify(data.errors[0]);
-    }
-    if (!message) {
-      message = error.message || 'Network error: Unable to connect to server';
-    }
-    return Promise.reject(new Error(message));
+    return Promise.reject(error);
   }
 );
 
@@ -239,153 +262,113 @@ const apiService = {
   // Auth endpoints
   auth: {
     login: async (credentials) => {
-      try {
-        const response = await apiClient.post('/auth/login', credentials);
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/auth/login', credentials),
+        {
+          loadingMessage: 'Signing you in...',
+          successMessage: 'Login successful! Welcome back.',
+          errorMessage: 'Login failed. Please check your credentials.'
         }
-      }
+      );
     },
 
     register: async (userData) => {
-      try {
-        const response = await apiClient.post('/auth/register', userData);
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/auth/register', userData),
+        {
+          loadingMessage: 'Creating your account...',
+          successMessage: 'Registration successful! Please verify your email.',
+          errorMessage: 'Registration failed. Please try again.'
         }
-      }
+      );
     },
 
     verifyOTP: async (otpData) => {
-      try {
-        const response = await apiClient.post('/auth/verify-otp', otpData);
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/auth/verify-otp', otpData),
+        {
+          loadingMessage: 'Verifying OTP...',
+          successMessage: 'Email verified successfully!',
+          errorMessage: 'OTP verification failed. Please try again.'
         }
-      }
+      );
     },
 
     verifyLoginOTP: async (otpData) => {
-      try {
-        const response = await apiClient.post('/auth/verify-login-otp', otpData, { cacheKey: null }); // No cache for OTP
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/auth/verify-login-otp', otpData, { cacheKey: null }),
+        {
+          loadingMessage: 'Verifying login OTP...',
+          successMessage: 'Login OTP verified successfully!',
+          errorMessage: 'Login OTP verification failed. Please try again.'
+        }
+      );
     },
 
     // --- Password Reset (Forgot Password) ---
     requestPasswordReset: async (data) => {
-      try {
-        const response = await apiClient.post('/auth/request-password-reset', data, { cacheKey: null });
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/auth/request-password-reset', data, { cacheKey: null }),
+        {
+          loadingMessage: 'Sending password reset email...',
+          successMessage: 'Password reset email sent successfully!',
+          errorMessage: 'Failed to send password reset email.'
+        }
+      );
     },
     verifyPasswordResetOtp: async (data) => {
-      try {
-        const response = await apiClient.post('/auth/verify-reset-otp', data, { cacheKey: null });
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/auth/verify-reset-otp', data, { cacheKey: null }),
+        {
+          loadingMessage: 'Verifying OTP...',
+          successMessage: 'OTP verified successfully!',
+          errorMessage: 'Failed to verify OTP.'
+        }
+      );
     },
     resetPassword: async (data) => {
-      try {
-        const response = await apiClient.post('/auth/reset-password', data, { cacheKey: null });
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/auth/reset-password', data, { cacheKey: null }),
+        {
+          loadingMessage: 'Resetting password...',
+          successMessage: 'Password reset successfully!',
+          errorMessage: 'Failed to reset password.'
+        }
+      );
     },
 
     // --- Password Change (Authenticated User) ---
     sendPasswordOTP: async () => {
-      try {
-        const response = await apiClient.post('/auth/send-password-otp', {}, { cacheKey: null });
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/auth/send-password-otp', {}, { cacheKey: null }),
+        {
+          loadingMessage: 'Sending OTP...',
+          successMessage: 'OTP sent successfully!',
+          errorMessage: 'Failed to send OTP.'
+        }
+      );
     },
 
     verifyPasswordOTP: async (otp) => {
-      try {
-        const response = await apiClient.post('/auth/verify-password-otp', { otp }, { cacheKey: null });
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/auth/verify-password-otp', { otp }, { cacheKey: null }),
+        {
+          loadingMessage: 'Verifying OTP...',
+          successMessage: 'OTP verified successfully!',
+          errorMessage: 'Failed to verify OTP.'
+        }
+      );
     },
 
     changePassword: async (data) => {
-      try {
-        const response = await apiClient.put('/auth/change-password', data, { cacheKey: null });
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.put('/auth/change-password', data, { cacheKey: null }),
+        {
+          loadingMessage: 'Changing password...',
+          successMessage: 'Password changed successfully!',
+          errorMessage: 'Failed to change password.'
+        }
+      );
     },
 
     getProfile: async () => {
@@ -396,13 +379,7 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to fetch profile');
       }
     },
 
@@ -411,13 +388,7 @@ const apiService = {
         const response = await apiClient.post('/auth/logout');
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Logout failed');
       }
     },
 
@@ -426,13 +397,7 @@ const apiService = {
         const response = await apiClient.post('/auth/refresh');
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Token refresh failed');
       }
     },
 
@@ -444,13 +409,7 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to fetch tier');
       }
     },
 
@@ -462,13 +421,7 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to fetch tier limits');
       }
     },
 
@@ -477,13 +430,7 @@ const apiService = {
         const response = await apiClient.post('/auth/upgrade-tier', tierData);
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to upgrade tier');
       }
     },
 
@@ -495,13 +442,7 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to fetch devices');
       }
     },
 
@@ -510,13 +451,7 @@ const apiService = {
         const response = await apiClient.put('/auth/profile', profileData);
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to update profile');
       }
     },
 
@@ -525,13 +460,7 @@ const apiService = {
         const response = await apiClient.put('/auth/settings', settingsData);
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to update settings');
       }
     }
   },
@@ -543,13 +472,7 @@ const apiService = {
         const response = await apiClient.get(`/public-vouchers/${voucherCode}`);
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message || error.response?.data?.error;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to search for voucher');
       }
     }
   },
@@ -558,40 +481,36 @@ const apiService = {
   vouchers: {
     // Get all vouchers
     getAll: async () => {
-      try {
-        const response = await apiClient.get('/vouchers', {
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get('/vouchers', {
           cacheKey: 'vouchers_list',
           cacheTtl: 120000 // 2 minutes
-        });
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
-      }
+        }),
+        {
+          loadingMessage: 'Loading vouchers...',
+          successMessage: 'Vouchers loaded successfully',
+          errorMessage: 'Failed to load vouchers',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     },
 
     // Get all transactions (voucher creations and redemptions)
-    getTransactions: async (page = 1, limit = 50) => {
-      try {
-        const response = await apiClient.get(`/vouchers/transactions`, {
+    getTransactions: async (page = 1) => {
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get(`/vouchers/transactions`, {
           cacheKey: `vouchers_transactions_${page}`,
           cacheTtl: 60000 // 1 minute
-        });
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
-      }
+        }),
+        {
+          loadingMessage: 'Loading voucher transactions...',
+          successMessage: 'Voucher transactions loaded successfully',
+          errorMessage: 'Failed to load voucher transactions',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     },
 
     getById: async (id) => {
@@ -602,133 +521,113 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to fetch voucher');
       }
     },
 
     create: async (voucherData) => {
-      try {
-        const response = await apiClient.post('/vouchers', voucherData);
-        // Clear vouchers cache after creation
+      const result = await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/vouchers', voucherData),
+        {
+          loadingMessage: 'Creating voucher...',
+          successMessage: 'Voucher created successfully!',
+          errorMessage: 'Failed to create voucher.'
+        }
+      );
+      if (result.success) {
         apiService.clearCache();
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
       }
+      return result;
     },
 
     createWorkOrder: async (voucherData) => {
-      try {
-        const response = await apiClient.post('/vouchers/work-order', voucherData);
-        // Clear vouchers cache after creation
+      const result = await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/vouchers/work-order', voucherData),
+        {
+          loadingMessage: 'Creating work order voucher...',
+          successMessage: 'Work order voucher created successfully!',
+          errorMessage: 'Failed to create work order voucher.'
+        }
+      );
+      if (result.success) {
         apiService.clearCache();
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
       }
+      return result;
     },
 
     createPurchaseEscrow: async (voucherData) => {
-      try {
-        const response = await apiClient.post('/vouchers/purchase-escrow', voucherData);
-        // Clear vouchers cache after creation
+      const result = await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/vouchers/purchase-escrow', voucherData),
+        {
+          loadingMessage: 'Creating purchase escrow voucher...',
+          successMessage: 'Purchase escrow voucher created successfully!',
+          errorMessage: 'Failed to create purchase escrow voucher.'
+        }
+      );
+      if (result.success) {
         apiService.clearCache();
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
       }
+      return result;
     },
 
     createPrepaid: async (voucherData) => {
-      try {
-        const response = await apiClient.post('/vouchers/prepaid', voucherData);
-        // Clear vouchers cache after creation
+      const result = await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/vouchers/prepaid', voucherData),
+        {
+          loadingMessage: 'Creating prepaid voucher...',
+          successMessage: 'Prepaid voucher created successfully!',
+          errorMessage: 'Failed to create prepaid voucher.'
+        }
+      );
+      if (result.success) {
         apiService.clearCache();
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
       }
+      return result;
     },
 
     createGiftCard: async (voucherData) => {
-      try {
-        const response = await apiClient.post('/vouchers/gift-card', voucherData);
-        // Clear vouchers cache after creation
+      const result = await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/vouchers/gift-card', voucherData),
+        {
+          loadingMessage: 'Creating gift card voucher...',
+          successMessage: 'Gift card voucher created successfully!',
+          errorMessage: 'Failed to create gift card voucher.'
+        }
+      );
+      if (result.success) {
         apiService.clearCache();
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
       }
+      return result;
     },
 
     redeem: async (redeemData) => {
-      try {
-        const response = await apiClient.post('/vouchers/redeem', redeemData);
-        // Clear vouchers cache after redemption
+      const result = await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/vouchers/redeem', redeemData),
+        {
+          loadingMessage: 'Redeeming voucher...',
+          successMessage: 'Voucher redeemed successfully!',
+          errorMessage: 'Failed to redeem voucher.'
+        }
+      );
+      if (result.success) {
         apiService.clearCache();
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message || error.response?.data?.error;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
       }
+      return result;
     },
 
     redeemVoucher: async (redeemData) => {
-      try {
-        const response = await apiClient.post('/vouchers/redeem', redeemData);
-        // Clear vouchers cache after redemption
+      const result = await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/vouchers/redeem', redeemData),
+        {
+          loadingMessage: 'Redeeming voucher...',
+          successMessage: 'Voucher redeemed successfully!',
+          errorMessage: 'Failed to redeem voucher.'
+        }
+      );
+      if (result.success) {
         apiService.clearCache();
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message || error.response?.data?.error;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
       }
+      return result;
     },
 
     confirmCancel: async (voucherId) => {
@@ -738,13 +637,7 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to confirm cancellation');
       }
     },
 
@@ -753,13 +646,7 @@ const apiService = {
         const response = await apiClient.post('/vouchers/request-redemption-otp', { voucherCode });
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to request redemption OTP');
       }
     },
 
@@ -768,13 +655,7 @@ const apiService = {
         const response = await apiClient.post('/vouchers/verify-redemption-otp', { voucherCode, otp });
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to verify redemption OTP');
       }
     },
 
@@ -785,13 +666,7 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to cancel voucher');
       }
     },
 
@@ -802,13 +677,7 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to activate voucher');
       }
     },
 
@@ -819,13 +688,7 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to activate voucher');
       }
     },
 
@@ -836,13 +699,7 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to cancel voucher');
       }
     },
 
@@ -853,13 +710,7 @@ const apiService = {
         apiService.clearCache();
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to release milestone');
       }
     },
 
@@ -871,13 +722,7 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to fetch balance');
       }
     },
 
@@ -889,13 +734,7 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to search voucher');
       }
     },
 
@@ -908,13 +747,7 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to upload voucher');
       }
     }
   },
@@ -922,46 +755,38 @@ const apiService = {
   // Theme endpoints
   themes: {
     getByVoucherType: async (voucherType) => {
-      try {
-        console.log(`🎨 API: Fetching themes for ${voucherType}`);
-        const response = await apiClient.get(`/themes/${voucherType}`, {
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get(`/themes/${voucherType}`, {
           cacheKey: `themes_${voucherType}`,
           cacheTtl: 300000 // 5 minutes
-        });
-        console.log(`🎨 API: Response for ${voucherType}:`, response.data);
-        return response.data;
-      } catch (error) {
-        console.error(`🎨 API: Error fetching themes for ${voucherType}:`, error);
-        console.error(`🎨 API: Error response:`, error.response?.data);
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
-      }
+        }),
+        {
+          loadingMessage: `Loading themes for ${voucherType}...`,
+          successMessage: `Themes loaded successfully`,
+          errorMessage: `Failed to load themes for ${voucherType}`,
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     }
   },
 
   // Transaction endpoints
   transactions: {
     getAll: async () => {
-      try {
-        const response = await apiClient.get('/transactions', {
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get('/transactions', {
           cacheKey: 'transactions_list',
           cacheTtl: 120000 // 2 minutes
-        });
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
-      }
+        }),
+        {
+          loadingMessage: 'Loading transactions...',
+          successMessage: 'Transactions loaded successfully',
+          errorMessage: 'Failed to load transactions',
+          showSuccessToast: false,
+          showErrorToast: true
+        }
+      );
     }
   },
 
@@ -969,38 +794,30 @@ const apiService = {
   payments: {
     // Initialize wallet funding
     fundWallet: async (paymentData) => {
-      try {
-        const response = await apiClient.post('/payments/fund-wallet', paymentData);
-        return response.data;
-      } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
-      }
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.post('/payments/fund-wallet', paymentData),
+        {
+          loadingMessage: 'Initializing wallet funding...',
+          successMessage: 'Wallet funding initiated successfully!',
+          errorMessage: 'Failed to initialize wallet funding.'
+        }
+      );
     },
 
     // Get wallet balance
     getWalletBalance: async () => {
-      try {
-        const response = await apiClient.get('/payments/wallet-balance', {
+      return await apiResponseHandler.handleApiCall(
+        () => apiClient.get('/payments/wallet-balance', {
           cacheKey: 'wallet_balance',
           cacheTtl: 60000 // 1 minute
-        });
-        return response.data;
-      } catch (error) {
-        console.error('❌ Error fetching wallet balance:', error);
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
-      }
+        }),
+        {
+          loadingMessage: 'Loading wallet balance...',
+          successMessage: 'Wallet balance loaded successfully.',
+          errorMessage: 'Failed to fetch wallet balance.',
+          showSuccessToast: false // Don't show success toast for GET requests
+        }
+      );
     },
 
     // Get wallet transactions
@@ -1018,13 +835,7 @@ const apiService = {
         return response.data;
       } catch (error) {
         console.error('❌ Error fetching wallet transactions:', error);
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to fetch wallet transactions');
       }
     },
 
@@ -1034,13 +845,7 @@ const apiService = {
         const response = await apiClient.get('/payments/banks');
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to fetch banks');
       }
     },
 
@@ -1050,13 +855,7 @@ const apiService = {
         const response = await apiClient.post('/payments/verify-account', accountData);
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to verify bank account');
       }
     },
 
@@ -1066,13 +865,7 @@ const apiService = {
         const response = await apiClient.post('/payments/withdraw', withdrawalData);
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to initiate withdrawal');
       }
     },
 
@@ -1085,13 +878,7 @@ const apiService = {
         });
         return response.data;
       } catch (error) {
-        // Show server error message directly
-        const serverMessage = error.response?.data?.message ;
-        if (serverMessage) {
-          throw new Error(serverMessage);
-        } else {
-          throw new Error('Network error: Unable to connect to server');
-        };
+        throw new Error(error.response?.data?.message || 'Failed to fetch withdrawals');
       }
     }
   }

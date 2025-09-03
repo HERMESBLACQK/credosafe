@@ -36,7 +36,7 @@ const Dashboard = () => {
     id: voucher.id,
     type: 'funding',
     amount: parseFloat(voucher.total_amount),
-    description: `${voucher.type.replace('-', ' ').toUpperCase()} Voucher Created`,
+    description: `${voucher.type ? voucher.type.replace('-', ' ').toUpperCase() : 'Voucher'} Voucher Created`,
     date: voucher.created_at,
     status: voucher.status
   })) : [];

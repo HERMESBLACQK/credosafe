@@ -457,7 +457,7 @@ const Transactions = () => {
                               <span>{formatTime(transaction.date)}</span>
                             </span>
                             <span className="bg-neutral-100 px-2 py-1 rounded text-xs self-start sm:self-auto">
-                              {transaction.voucher_type ? transaction.voucher_type.replace('_', ' ').toUpperCase() : transaction.category}
+                              {transaction.voucher_type ? transaction.voucher_type.replace('_', ' ').toUpperCase() : (transaction.category || 'Unknown')}
                             </span>
                             {transaction.redemption_type && (
                               <span className="bg-purple-100 text-purple-600 px-2 py-1 rounded text-xs self-start sm:self-auto">
