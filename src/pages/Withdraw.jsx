@@ -18,13 +18,13 @@ import {
 } from 'lucide-react';
 import FloatingFooter from '../components/FloatingFooter';
 import apiService from '../api';
-import { showToast } from '../store/slices/toastSlice';
-import { useLoading } from '../contexts/LoadingContext';
+import { showSuccess, showError } from '../utils/toast';
+// import { useLoading } from '../contexts/LoadingContext';
 import useFeeSettings from '../hooks/useFeeSettings';
 
 
 const Withdraw = () => {
-  const { fees, loading: feeLoading, error: feeError, calculateFee } = useFeeSettings();
+  const { fees, loading: feeLoading } = useFeeSettings();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   
@@ -38,7 +38,7 @@ const Withdraw = () => {
   const [userData, setUserData] = useState(null);
   const [hasRequiredData, setHasRequiredData] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [withdrawFee, setWithdrawFee] = useState(0);
+  // const [withdrawFee, setWithdrawFee] = useState(0);
   const [withdrawForm, setWithdrawForm] = useState({
     amount: '',
     accountNumber: '',
@@ -84,10 +84,10 @@ const Withdraw = () => {
           setUserData(userData);
           setHasRequiredData(userData.phone && userData.location);
         } else {
-          dispatch(showToast({ message: response.error || 'Failed to fetch user data.', type: 'error' }));
+          showError(response.error || 'Failed to fetch user data.');
         }
       } catch (error) {
-        dispatch(showToast({ message: 'An error occurred while fetching user data.', type: 'error' }));
+        showError('An error occurred while fetching user data.');
         console.error('Fetch user data error:', error);
       }
     };
@@ -119,7 +119,7 @@ const Withdraw = () => {
               daily_limit: 1000000
             });
           }
-        } catch (error) {
+        } catch {
           setTierLimits({
             daily_withdrawal_limit: 50000,
             monthly_withdrawal_limit: 500000,
@@ -166,7 +166,7 @@ const Withdraw = () => {
       }
     } catch (error) {
       console.error('Error fetching wallet balance:', error);
-      dispatch(showToast({ type: 'error', message: 'Failed to fetch wallet balance' }));
+      showError('Failed to fetch wallet balance');
     }
   };
 
@@ -180,11 +180,11 @@ const Withdraw = () => {
         setBanks(response.data);
       } else {
         console.error('❌ Banks response not successful:', response);
-        dispatch(showToast({ type: 'error', message: response.message || 'Failed to fetch banks' }));
+        showError(response.message || 'Failed to fetch banks');
       }
     } catch (error) {
       console.error('❌ Error fetching banks:', error);
-      dispatch(showToast({ type: 'error', message: 'Failed to fetch banks' }));
+      showError('Failed to fetch banks');
     } finally {
       setIsLoadingBanks(false);
     }
@@ -204,11 +204,11 @@ const Withdraw = () => {
             userData?.wallet
           );
         } else {
-          dispatch(showToast({ message: response.error || 'Failed to fetch user data.', type: 'error' }));
+          showError(response.error || 'Failed to fetch user data.');
           navigate("/");
         }
       } catch (error) {
-        dispatch(showToast({ message: 'An error occurred while fetching user data.', type: 'error' }));
+        showError('An error occurred while fetching user data.');
         console.error('Fetch user data error:', error);
         navigate("/");
       } finally {
@@ -239,7 +239,7 @@ const Withdraw = () => {
   // Verify bank account
   const verifyAccount = async () => {
     if (!withdrawForm.accountNumber || !withdrawForm.bankCode) {
-      dispatch(showToast({ type: 'error', message: 'Please enter account number and select bank' }));
+      showError('Please enter account number and select bank');
       return;
     }
 
@@ -256,13 +256,13 @@ const Withdraw = () => {
           accountName: response.data.accountName
         }));
         setIsVerified(true);
-        dispatch(showToast({ type: 'success', message: 'Account verified successfully' }));
+        showSuccess('Account verified successfully');
       } else {
-        dispatch(showToast({ type: 'error', message: response.message }));
+        showError(response.message);
       }
     } catch (error) {
       console.error('Error verifying account:', error);
-      dispatch(showToast({ type: 'error', message: 'Failed to verify account' }));
+      showError('Failed to verify account');
     } finally {
       setIsVerifying(false);
     }
@@ -274,48 +274,33 @@ const Withdraw = () => {
     
     // Validate user data
     if (!userData || !hasRequiredData) {
-      dispatch(showToast({
-        message: 'Please complete your profile with phone number and location before withdrawing.',
-        type: 'error'
-      }));
+      showError('Please complete your profile with phone number and location before withdrawing.');
       return;
     }
 
     if (!isVerified) {
-      dispatch(showToast({
-        message: 'Please verify your bank account first.',
-        type: 'error'
-      }));
+      showError('Please verify your bank account first.');
       return;
     }
 
     if (!withdrawForm.amount || parseFloat(withdrawForm.amount) <= 0) {
-      dispatch(showToast({
-        message: 'Please enter a valid withdrawal amount.',
-        type: 'error'
-      }));
+      showError('Please enter a valid withdrawal amount.');
       return;
     }
 
     const amount = parseFloat(withdrawForm.amount);
     if (amount > walletBalance) {
-      dispatch(showToast({
-        message: 'Insufficient balance for withdrawal.',
-        type: 'error'
-      }));
+      showError('Insufficient balance for withdrawal.');
       return;
     }
 
     if (tierLimits && amount > tierLimits.daily_withdrawal_limit) {
-        dispatch(showToast({ 
-        message: `Withdrawal amount exceeds daily limit of ₦${tierLimits.daily_withdrawal_limit.toLocaleString()}.`,
-        type: 'error'
-        }));
+        showError(`Withdrawal amount exceeds daily limit of ₦${tierLimits.daily_withdrawal_limit.toLocaleString()}.`);
         return;
     }
 
     try {
-      startGlobalLoading('Processing withdrawal...');
+      // Optionally show loading toast via helpers if desired
       const response = await apiService.wallet.withdraw({
         amount: amount,
         accountNumber: withdrawForm.accountNumber,
@@ -324,10 +309,7 @@ const Withdraw = () => {
       });
 
       if (response.success) {
-        dispatch(showToast({ 
-          message: 'Withdrawal request submitted successfully!',
-          type: 'success'
-        }));
+        showSuccess('Withdrawal request submitted successfully!');
         
         // Reset form
         setWithdrawForm({
@@ -341,19 +323,13 @@ const Withdraw = () => {
         // Refresh balance
         await fetchWalletBalance();
       } else {
-        dispatch(showToast({
-          message: response.message || 'Withdrawal failed.',
-          type: 'error'
-        }));
+        showError(response.message || 'Withdrawal failed.');
       }
     } catch (error) {
       console.error('Withdrawal error:', error);
-      dispatch(showToast({
-        message: 'Withdrawal failed. Please try again.',
-        type: 'error'
-      }));
+      showError('Withdrawal failed. Please try again.');
     } finally {
-      stopGlobalLoading();
+      // End of withdrawal
     }
   };
 
@@ -560,8 +536,7 @@ const Withdraw = () => {
                       setIsVerified(false);
                     }}
                     onBlur={() => {
-                      const fee = calculateFee('debit_fee', parseFloat(withdrawForm.amount) || 0);
-                      setWithdrawFee(fee);
+                      /* fee calc retained in UI above via calculateWithdrawalFee */
                     }}
                     className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     placeholder="Enter 10-digit account number"

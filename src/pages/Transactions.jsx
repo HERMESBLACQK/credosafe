@@ -38,7 +38,7 @@ import FloatingFooter from '../components/FloatingFooter';
 const Transactions = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user, userProfile, isUserLoaded } = useUser();
+  const { userProfile, isUserLoaded } = useUser();
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
@@ -135,7 +135,7 @@ const Transactions = () => {
       fetchTransactions();
       fetchThemes();
     }
-  }, [dispatch, isUserLoaded]);
+  }, [dispatch, isUserLoaded, fetchBalance]);
 
   // Separate useEffect for balance updates when user profile changes
   useEffect(() => {

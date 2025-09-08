@@ -4,7 +4,7 @@ import { useInView } from 'react-intersection-observer';
 import MessageBubble from './MessageBubble';
 import FileUpload from './FileUpload';
 import supportChatService from '../../api/supportChat';
-import { toast } from 'react-toastify';
+import { showError } from '../../utils/toast';
 import { cn } from '../../utils/cn';
 
 const ChatInterface = ({ conversation, onBack, currentUserId }) => {
@@ -42,7 +42,7 @@ const ChatInterface = ({ conversation, onBack, currentUserId }) => {
         conversation.participants = response.data.participants;
       }
     } catch (error) {
-      toast.error(error.message);
+      showError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +74,7 @@ const ChatInterface = ({ conversation, onBack, currentUserId }) => {
 
     // Check if conversation is open
     if (conversation.status !== 'open') {
-      toast.error('Cannot send messages in closed or resolved conversations');
+      showError('Cannot send messages in closed or resolved conversations');
       return;
     }
 
@@ -86,7 +86,7 @@ const ChatInterface = ({ conversation, onBack, currentUserId }) => {
       // Reload messages to get the latest
       await loadMessages();
     } catch (error) {
-      toast.error(error.message);
+      showError(error.message);
     } finally {
       setIsTyping(false);
     }
@@ -100,7 +100,7 @@ const ChatInterface = ({ conversation, onBack, currentUserId }) => {
       // Reload messages to get the latest
       await loadMessages();
     } catch (error) {
-      toast.error(error.message);
+      showError(error.message);
     } finally {
       setIsTyping(false);
     }

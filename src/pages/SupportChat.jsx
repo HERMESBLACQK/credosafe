@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, MessageSquare, Search, Filter, MoreVertical } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { showSuccess, showError } from '../utils/toast';
 import supportChatService from '../api/supportChat';
 import ChatInterface from '../components/chat/ChatInterface';
 import CreateConversationModal from '../components/chat/CreateConversationModal';
@@ -54,7 +54,7 @@ const SupportChat = () => {
       console.log('📥 [USER SUPPORT CHAT] Conversations state updated:', response.data?.length || 0, 'conversations');
     } catch (error) {
       console.error('❌ [USER SUPPORT CHAT] Error loading conversations:', error);
-      toast.error(error.message);
+      showError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -68,7 +68,7 @@ const SupportChat = () => {
       const response = await supportChatService.createConversation(conversationData);
       console.log('📥 [USER SUPPORT CHAT] Conversation created:', response);
       
-      toast.success('Conversation created successfully');
+      showSuccess('Conversation created successfully');
       setShowCreateModal(false);
       
       // Reload conversations
@@ -82,7 +82,7 @@ const SupportChat = () => {
       }
     } catch (error) {
       console.error('❌ [USER SUPPORT CHAT] Error creating conversation:', error);
-      toast.error(error.message);
+      showError(error.message);
     }
   };
 

@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { useLoading } from '../contexts/LoadingContext';
 import Loader from '../components/Loader';
 import { useUser } from '../hooks/useUser';
-import { useError } from '../contexts/ErrorContext';
 import { 
   Shield, 
   DollarSign, 
@@ -60,8 +59,9 @@ const Dashboard = () => {
     // Set balance from user profile
     try {
       setIsLoadingBalance(true);
-      if (userProfile?.wallet?.balance !== undefined) {
-        setUserBalance(userProfile.wallet.balance);
+      const balanceValue = userProfile?.wallet?.balance;
+      if (typeof balanceValue === 'number') {
+        setUserBalance(balanceValue);
       } else {
         setUserBalance(0);
       }
@@ -121,7 +121,7 @@ const Dashboard = () => {
             >
               <div className="flex items-center space-x-2 text-neutral-600">
                 <User className="w-5 h-5" />
-                <span className="font-medium">{userProfile.firstName || user?.firstName || user?.name}</span>
+                <span className="font-medium">{userProfile?.firstName || user?.firstName || user?.name || 'User'}</span>
               </div>
             </div>
           </div>
@@ -137,7 +137,7 @@ const Dashboard = () => {
           {/* Welcome Section */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-neutral-900 mb-2">
-              Welcome back, {userProfile.firstName || user?.firstName || user?.name}!
+              Welcome back, {userProfile?.firstName || user?.firstName || user?.name || 'User'}!
             </h1>
             <p className="text-neutral-600">
               Here's your CredoSafe dashboard overview

@@ -161,11 +161,15 @@ function App() {
               pauseOnFocusLoss
               draggable
               pauseOnHover
+              limit={1}
               theme="light"
-              toastStyle={{
-                fontSize: '14px',
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              toastClassName={() =>
+                `!rounded-lg !text-sm !shadow-lg max-w-sm w-full sm:w-96`
+              }
+              bodyClassName={() => `text-sm`}
+              style={{
+                width: '100%',
+                maxWidth: '24rem'
               }}
             />
           </ErrorProvider>
