@@ -603,7 +603,7 @@ const WorkOrderVouchers = () => {
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-neutral-900">Additional Details</h3>
                     
-                    {/* <div>
+                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-2">
                         Due Date
                       </label>
@@ -613,7 +613,7 @@ const WorkOrderVouchers = () => {
                         onChange={(e) => handleInputChange('dueDate', e.target.value)}
                         className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
-                    </div> */}
+                    </div> 
 
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-2">
